@@ -5,8 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0a0c0f">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Kettlebell Timer</title>
+
+<title>Swingtime</title>
+<meta name="description" content="40 seconds on, 20 seconds off. A 15-exercise kettlebell circuit timer.">
+<!-- Label under the iOS home-screen icon. Without this iOS falls back to <title>. -->
+<meta name="apple-mobile-web-app-title" content="Swingtime">
+<meta name="application-name" content="Swingtime">
+
+<!-- SVG favicon is inlined so the page still has an icon when opened as a local
+     file with no server; the PNG is the fallback for older browsers. -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%230a0c0f'/%3E%3Cg transform='translate(0,-16)'%3E%3Cpath d='M 58 100 A 32 48 0 0 1 122 100 L 106 100 A 16 32 0 0 0 74 100 Z' fill='%232ee06a'/%3E%3Ccircle cx='90' cy='130' r='36' fill='%232ee06a'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="alternate icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+
+<!-- Link preview (iMessage, Slack, etc). og:image must be an absolute URL. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Swingtime">
+<meta property="og:title" content="Swingtime">
+<meta property="og:description" content="40 seconds on, 20 seconds off. A 15-exercise kettlebell circuit timer.">
+<meta property="og:url" content="https://joshboyden.github.io/kettlebell-timer/">
+<meta property="og:image" content="https://joshboyden.github.io/kettlebell-timer/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Swingtime — kettlebell circuit timer">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Swingtime">
+<meta name="twitter:description" content="40 seconds on, 20 seconds off. A 15-exercise kettlebell circuit timer.">
+<meta name="twitter:image" content="https://joshboyden.github.io/kettlebell-timer/og.png">
 <style>
   :root {
     --bg: #0a0c0f;
@@ -176,7 +204,7 @@
 
 <!-- ============ SETUP ============ -->
 <section id="setup" class="screen active">
-  <h1>Kettlebell Circuit<span>15 exercises &middot; one round each</span></h1>
+  <h1>Swingtime<span>Kettlebell circuit &middot; 15 exercises</span></h1>
 
   <div class="fields">
     <div class="field">
