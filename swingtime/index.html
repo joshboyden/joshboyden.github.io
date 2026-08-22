@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0c0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<title>Swingtime</title>
+<meta name="description" content="40 seconds on, 20 seconds off. A 15-exercise kettlebell circuit timer.">
+<!-- Label under the iOS home-screen icon. Without this iOS falls back to <title>. -->
+<meta name="apple-mobile-web-app-title" content="Swingtime">
+<meta name="application-name" content="Swingtime">
+
+<!-- SVG favicon is inlined so the page still has an icon when opened as a local
+     file with no server; the PNG is the fallback for older browsers. -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%230a0c0f'/%3E%3Cg transform='translate(0,-16)'%3E%3Cpath d='M 58 100 A 32 48 0 0 1 122 100 L 106 100 A 16 32 0 0 0 74 100 Z' fill='%232ee06a'/%3E%3Ccircle cx='90' cy='130' r='36' fill='%232ee06a'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="alternate icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+
+<!-- Link preview (iMessage, Slack, etc). og:image must be an absolute URL. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Swingtime">
+<meta property="og:title" content="Swingtime">
+<meta property="og:description" content="40 seconds on, 20 seconds off. A 15-exercise kettlebell circuit timer.">
+<meta property="og:url" content="https://joshboyden.github.io/kettlebell-timer/swingtime/">
+<meta property="og:image" content="https://joshboyden.github.io/kettlebell-timer/swingtime/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Swingtime — kettlebell circuit timer">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Swingtime">
+<meta name="twitter:description" content="40 seconds on, 20 seconds off. A 15-exercise kettlebell circuit timer.">
+<meta name="twitter:image" content="https://joshboyden.github.io/kettlebell-timer/swingtime/og.png">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --panel: #14181e;
+    --line: #262c35;
+    --text: #f2f5f8;
+    --muted: #98a3b2;
+    --accent: #e8edf3;
+    --count: #f5a524;
+    --work: #2ee06a;
+    --rest: #3b9cff;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body { height: 100%; margin: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+    touch-action: manipulation;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+    -webkit-user-select: none;
+    user-select: none;
+    transition: background-color .3s ease;
+  }
+
+  body[data-phase="countdown"] { --accent: var(--count); background: #17120a; }
+  body[data-phase="work"]      { --accent: var(--work);  background: #071510; }
+  body[data-phase="rest"]      { --accent: var(--rest);  background: #08121e; }
+  body[data-phase="done"]      { --accent: var(--work);  background: #071510; }
+
+  /* Last 3 seconds of any interval: the numerals go amber while the background
+     keeps its phase colour, so "what I'm doing" and "it's about to change" are
+     both readable from across the room. Declared after the phase rules so it
+     wins at equal specificity. */
+  body[data-warn="1"] { --accent: var(--count); }
+
+  .screen {
+    display: none;
+    min-height: 100%;
+    min-height: 100dvh;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    flex-direction: column;
+  }
+  .screen.active { display: flex; }
+
+  /* ---------- Setup ---------- */
+
+  #setup { gap: 16px; justify-content: center; max-width: 520px; margin: 0 auto; width: 100%; }
+
+  h1 { font-size: 28px; line-height: 1.15; letter-spacing: -.02em; margin: 0; }
+  h1 span { display: block; color: var(--muted); font-size: 14px; font-weight: 500; letter-spacing: 0; margin-top: 6px; }
+
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .field { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }
+  .field label { display: block; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .field input {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    color: var(--text);
+    font: 600 26px/1.1 inherit;
+    font-variant-numeric: tabular-nums;
+    padding: 0;
+    min-height: 44px;
+  }
+  input:focus { outline: none; }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+
+  .plan { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .plan header {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 4px 8px 4px 14px; border-bottom: 1px solid var(--line);
+  }
+  .plan h2 { margin: 0; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .plan header button {
+    background: none; border: 0; color: var(--muted); font-size: 12px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase; min-height: 44px; padding: 0 8px; border-radius: 10px;
+  }
+
+  .rows { list-style: none; margin: 0; padding: 4px 0; max-height: 38vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .rows li { display: flex; align-items: center; gap: 8px; padding: 2px 12px 2px 14px; }
+  .rows .n { width: 18px; flex: none; color: #5f6a78; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rows .nm { flex: 1; font-size: 14px; line-height: 1.25; min-width: 0; }
+  .rows input {
+    width: 68px; flex: none; text-align: right;
+    background: #0c1015; border: 1px solid var(--line); border-radius: 10px;
+    color: var(--text); font: 600 17px/1 inherit; font-variant-numeric: tabular-nums;
+    min-height: 44px; padding: 0 8px;
+  }
+  .rows input:focus { border-color: var(--work); }
+  .rows .u { width: 18px; flex: none; color: var(--muted); font-size: 13px; }
+
+  .total { text-align: center; color: var(--muted); font-size: 13px; margin: 0; }
+
+  .crosslink {
+    display: block; text-align: center; text-decoration: none;
+    color: var(--muted); font-size: 13px; font-weight: 600;
+    padding: 12px; min-height: 44px;
+  }
+
+  /* ---------- Buttons ---------- */
+
+  button {
+    font-family: inherit;
+    font-weight: 650;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    min-height: 56px;
+    min-width: 56px;
+    font-size: 17px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  button:active { filter: brightness(1.35); }
+
+  .primary { background: var(--work); border-color: var(--work); color: #04120a; min-height: 64px; font-size: 20px; }
+
+  /* ---------- Run ---------- */
+
+  #run { justify-content: space-between; gap: 12px; }
+
+  .topbar { display: flex; align-items: center; gap: 12px; }
+  .round { font-size: 15px; font-weight: 700; letter-spacing: .04em; color: var(--muted); }
+  .round b { color: var(--accent); }
+  .bar { flex: 1; height: 6px; border-radius: 3px; background: #1d232c; overflow: hidden; }
+  /* No CSS transition here: the width is rewritten every animation frame, so a
+     transition would restart each frame and permanently lag behind the clock. */
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent); }
+  .icon-btn { min-height: 44px; min-width: 44px; height: 44px; width: 44px; font-size: 19px; display: grid; place-items: center; padding: 0; border-radius: 12px; }
+  .icon-btn.off { color: #6c7684; }
+
+  .stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 4px; min-height: 0; }
+
+  .phase-label { font-size: clamp(14px, 4.5vw, 20px); font-weight: 800; letter-spacing: .28em; text-transform: uppercase; color: var(--accent); }
+
+  .count {
+    font-size: clamp(96px, 44vw, 260px);
+    line-height: .9;
+    font-weight: 800;
+    letter-spacing: -.04em;
+    color: var(--accent);
+    margin: 6px 0;
+  }
+
+  .exercise { font-size: clamp(22px, 7vw, 36px); font-weight: 700; line-height: 1.15; letter-spacing: -.01em; padding: 0 4px; }
+  .meta { font-size: clamp(17px, 5.2vw, 24px); font-weight: 700; color: var(--accent); margin-top: 8px; }
+  .cue { font-size: clamp(14px, 4vw, 17px); color: var(--muted); line-height: 1.4; max-width: 30ch; margin-top: 10px; padding: 0 4px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); height: 16px; margin-bottom: 2px; }
+  .paused-flag { color: var(--count); font-weight: 700; letter-spacing: .18em; font-size: 13px; text-transform: uppercase; height: 16px; }
+
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ---------- Done ---------- */
+
+  #done { justify-content: center; align-items: center; text-align: center; gap: 14px; }
+  .done-mark { font-size: clamp(64px, 24vw, 140px); line-height: 1; }
+  #done h2 { font-size: clamp(28px, 9vw, 44px); margin: 0; letter-spacing: -.02em; }
+  #done p { color: var(--muted); margin: 0; font-size: 16px; }
+  #done button { width: 100%; max-width: 340px; }
+</style>
+</head>
+<body data-phase="idle">
+
+<!-- ============ SETUP ============ -->
+<section id="setup" class="screen active">
+  <h1>Swingtime<span>Kettlebell circuit &middot; 15 exercises</span></h1>
+
+  <div class="fields">
+    <div class="field">
+      <label for="workInput">Work (sec)</label>
+      <input id="workInput" type="number" inputmode="numeric" pattern="[0-9]*" min="5" max="600" step="5" value="40">
+    </div>
+    <div class="field">
+      <label for="restInput">Rest (sec)</label>
+      <input id="restInput" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="600" step="5" value="20">
+    </div>
+  </div>
+
+  <div class="plan">
+    <header>
+      <h2>Weights</h2>
+      <button id="defaultsBtn" type="button">Defaults</button>
+    </header>
+    <ol class="rows" id="planList"></ol>
+  </div>
+
+  <p class="total" id="totalTime"></p>
+
+  <button id="startBtn" class="primary">Start Workout</button>
+
+  <a class="crosslink" href="../silverfalls/">Silver Falls training plan &rarr;</a>
+</section>
+
+<!-- ============ RUN ============ -->
+<section id="run" class="screen">
+  <div class="topbar">
+    <span class="round">ROUND <b id="roundNum">1</b> / 15</span>
+    <span class="bar"><i id="progress"></i></span>
+    <button id="muteBtn" class="icon-btn" aria-label="Toggle sound">&#128266;</button>
+  </div>
+
+  <div class="stage">
+    <div class="phase-label" id="phaseLabel">GET READY</div>
+    <div class="count" id="count">3</div>
+    <div class="paused-flag" id="pausedFlag"></div>
+    <div class="eyebrow" id="eyebrow"></div>
+    <div class="exercise" id="exName">Kettlebell Swings</div>
+    <div class="meta" id="exMeta">35 lb</div>
+    <div class="cue" id="exCue"></div>
+  </div>
+
+  <div class="controls">
+    <button id="pauseBtn">Pause</button>
+    <button id="skipBtn">Skip &#9654;</button>
+    <button id="resetBtn" style="grid-column: 1 / -1;">Reset</button>
+  </div>
+</section>
+
+<!-- ============ DONE ============ -->
+<section id="done" class="screen">
+  <div class="done-mark">&#127947;</div>
+  <h2>Workout complete</h2>
+  <p id="doneStats">15 rounds finished.</p>
+  <button id="againBtn" class="primary">Back to Setup</button>
+</section>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------ *
+   * Workout data.  `lb` is the starting suggestion; it is editable on the
+   * setup screen and remembered between sessions.  0 means bodyweight.
+   * ------------------------------------------------------------------ */
+
+  var EXERCISES = [
+    { name: 'Kettlebell Swings',         lb: 35,
+      cue: 'Hinge at the hips, snap them forward — power from the hips, not the arms.' },
+    { name: 'Goblet Squats',             lb: 35,
+      cue: 'Bell at your chest, elbows inside the knees, sit straight down between your heels.' },
+    { name: 'Push Press (right)',        lb: 25,
+      cue: 'Short dip in the knees, then drive the bell overhead — legs start it, arm finishes it.' },
+    { name: 'Push Press (left)',         lb: 25,
+      cue: 'Same dip and drive on the left. Lock the elbow out over your ear, not in front of you.' },
+    { name: 'Kettlebell Rows (right)',   lb: 30,
+      cue: 'Flat back, pull the bell to your hip and squeeze the shoulder blade — no twisting.' },
+    { name: 'Kettlebell Rows (left)',    lb: 30,
+      cue: 'Brace the free hand on your knee, pull with the back muscles, lower it under control.' },
+    { name: 'Kettlebell Swings',         lb: 35,
+      cue: 'Float the bell, don’t lift it. Glutes and abs lock hard at the top of every rep.' },
+    { name: 'Reverse Lunges',            lb: 25,
+      cue: 'Step back, drop the back knee straight down, keep your chest tall the whole way.' },
+    { name: 'Russian Twists',            lb: 20,
+      cue: 'Lean back, chest up, rotate from the ribs — move the bell, not just your arms.' },
+    { name: 'Clean and Press (right)',   lb: 20,
+      cue: 'Guide the bell to the rack, don’t let it flip onto your wrist, then press overhead.' },
+    { name: 'Clean and Press (left)',    lb: 20,
+      cue: 'Elbow stays tight to the ribs on the clean, press once the bell is settled.' },
+    { name: 'Kettlebell Swings',         lb: 35,
+      cue: 'Last swings — keep the arms loose and let the hips do all the work.' },
+    { name: 'Thrusters',                 lb: 25,
+      cue: 'Squat down, then ride the stand-up straight into the press — one smooth motion.' },
+    { name: 'Suitcase Deadlift (right)', lb: 40,
+      cue: 'Bell beside your foot, shoulders level — don’t let the loaded side tip you over.' },
+    { name: 'Suitcase Deadlift (left)',  lb: 40,
+      cue: 'Push the floor away, stand tall, and fight the sideways lean the whole set.' }
+  ];
+
+  var DEFAULT_LB = EXERCISES.map(function (e) { return e.lb; });
+
+  var ROUNDS = EXERCISES.length;
+  var LEAD_IN = 3;   // one "get ready" countdown at the very start
+  var WARN_AT = 3;   // ticks + amber numerals for the last N sec of every interval
+
+  /* ------------------------------------------------------------------ *
+   * Element refs
+   * ------------------------------------------------------------------ */
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  var screens   = { setup: $('setup'), run: $('run'), done: $('done') };
+  var workInput = $('workInput'), restInput = $('restInput');
+  var planList  = $('planList'),  totalTime  = $('totalTime');
+  var countEl   = $('count'),     phaseLabel = $('phaseLabel');
+  var exName    = $('exName'),    exMeta     = $('exMeta'),  exCue = $('exCue');
+  var eyebrow   = $('eyebrow'),   roundNum   = $('roundNum');
+  var progress  = $('progress'),  pausedFlag = $('pausedFlag');
+  var pauseBtn  = $('pauseBtn'),  muteBtn    = $('muteBtn');
+  var doneStats = $('doneStats');
+
+  /* ------------------------------------------------------------------ *
+   * Audio  (Web Audio API only — no files, no network)
+   * ------------------------------------------------------------------ */
+
+  var audioCtx = null;
+  var muted = false;
+
+  // Called from inside the Start button's tap handler. iOS only allows an
+  // AudioContext to leave the "suspended" state during a user gesture, so we
+  // create it here and immediately play a zero-volume buffer to unlock it.
+  function unlockAudio() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtx) audioCtx = new Ctx();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      var buf = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+      var src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      src.connect(audioCtx.destination);
+      src.start(0);
+    } catch (e) { /* audio is optional — never block the workout */ }
+  }
+
+  function tone(freq, duration, volume, type, delay) {
+    if (muted || !audioCtx) return;
+    try {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      var t0 = audioCtx.currentTime + (delay || 0);
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      // Short attack + exponential decay keeps it crisp and click-free.
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(volume, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t0);
+      osc.stop(t0 + duration + 0.02);
+    } catch (e) { /* ignore */ }
+  }
+
+  var sfx = {
+    tick:  function () { tone(880,  0.09, 0.30, 'square'); },
+    work:  function () { tone(1320, 0.45, 0.42, 'sine'); tone(1760, 0.28, 0.16, 'sine', 0.02); },
+    rest:  function () { tone(440,  0.50, 0.38, 'sine'); },
+    finish:function () { tone(880,  0.30, 0.40, 'sine', 0);
+                         tone(1108, 0.30, 0.40, 'sine', 0.28);
+                         tone(1480, 0.70, 0.45, 'sine', 0.56); }
+  };
+
+  muteBtn.addEventListener('click', function () {
+    muted = !muted;
+    muteBtn.innerHTML = muted ? '&#128263;' : '&#128266;';
+    muteBtn.classList.toggle('off', muted);
+    persist();
+    if (!muted) sfx.tick();
+  });
+
+  /* ------------------------------------------------------------------ *
+   * Wake lock  (feature-detected, fails silently)
+   * ------------------------------------------------------------------ */
+
+  var wakeLock = null;
+
+  function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    if (wakeLock) return;
+    navigator.wakeLock.request('screen').then(function (lock) {
+      wakeLock = lock;
+      lock.addEventListener('release', function () { wakeLock = null; });
+    }).catch(function () { /* denied or unsupported — carry on */ });
+  }
+
+  function releaseWakeLock() {
+    if (!wakeLock) return;
+    var lock = wakeLock;
+    wakeLock = null;
+    try { lock.release(); } catch (e) { /* ignore */ }
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && state.running && !state.paused) {
+      requestWakeLock();
+    }
+  });
+
+  /* ------------------------------------------------------------------ *
+   * Timer state.  All timing comes from Date.now() deltas; phase ends are
+   * scheduled from the previous phase's end so ticks never accumulate drift.
+   * ------------------------------------------------------------------ */
+
+  var state = {
+    running: false,
+    paused: false,
+    phase: 'idle',      // 'countdown' | 'work' | 'rest' | 'done'
+    round: 0,           // 1-based index into EXERCISES
+    phaseEnd: 0,        // Date.now() timestamp
+    phaseLen: 0,        // ms, for the progress bar
+    remaining: 0,       // ms left, captured on pause
+    workSec: 40,
+    restSec: 20,
+    startedAt: 0,
+    lastShown: null,    // last rendered whole second, for tick sounds
+    warn: false
+  };
+
+  var raf = null;
+
+  function durationOf(phase) {
+    if (phase === 'countdown') return LEAD_IN * 1000;
+    if (phase === 'work') return state.workSec * 1000;
+    return state.restSec * 1000;
+  }
+
+  // `base` is the timestamp the phase starts at. Passing the previous phase's
+  // end timestamp keeps the whole workout on one drift-free schedule.
+  function enterPhase(phase, base, silent) {
+    state.phase = phase;
+    state.phaseLen = durationOf(phase);
+    state.phaseEnd = base + state.phaseLen;
+    state.lastShown = null;
+    setWarn(false);
+    document.body.setAttribute('data-phase', phase);
+
+    if (!silent) {
+      if (phase === 'work') sfx.work();
+      else if (phase === 'rest') sfx.rest();
+    }
+    paint();
+  }
+
+  function setWarn(on) {
+    if (state.warn === on) return;
+    state.warn = on;
+    document.body.setAttribute('data-warn', on ? '1' : '0');
+  }
+
+  function advance() {
+    var base = state.phaseEnd;
+
+    if (state.phase === 'countdown') {          // the one-time lead-in
+      enterPhase('work', base, laggingBehind(base, state.workSec * 1000));
+    } else if (state.phase === 'work') {
+      if (state.round >= ROUNDS) return finish();
+      if (state.restSec <= 0) {
+        state.round++;
+        enterPhase('work', base, laggingBehind(base, state.workSec * 1000));
+      } else {
+        enterPhase('rest', base, laggingBehind(base, state.restSec * 1000));
+      }
+    } else if (state.phase === 'rest') {
+      state.round++;
+      enterPhase('work', base, laggingBehind(base, state.workSec * 1000));
+    }
+  }
+
+  // If the app was backgrounded we may replay several phases in one frame.
+  // Only the phase we actually land in should make a sound.
+  function laggingBehind(base, len) {
+    return Date.now() >= base + len;
+  }
+
+  function finish() {
+    state.running = false;
+    state.phase = 'done';
+    setWarn(false);
+    document.body.setAttribute('data-phase', 'done');
+    releaseWakeLock();
+    sfx.finish();
+    var mins = Math.round((Date.now() - state.startedAt) / 60000);
+    doneStats.textContent = ROUNDS + ' rounds · ' + state.workSec + 's work / ' +
+      state.restSec + 's rest · about ' + mins + ' min';
+    show('done');
+  }
+
+  function frame() {
+    raf = requestAnimationFrame(frame);
+    if (!state.running || state.paused) return;
+
+    var guard = 0;
+    while (state.running && Date.now() >= state.phaseEnd && guard++ < 500) {
+      advance();
+    }
+    if (state.running) paint();
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Rendering
+   * ------------------------------------------------------------------ */
+
+  function ex(i) { return EXERCISES[i - 1]; }
+
+  function weightText(e) { return e.lb > 0 ? e.lb + ' lb' : 'Bodyweight'; }
+
+  function paint() {
+    if (!state.running) return;
+
+    var left = state.paused ? state.remaining : (state.phaseEnd - Date.now());
+    if (left < 0) left = 0;
+    var secs = Math.ceil(left / 1000);
+
+    // The countdown effect rides the tail of every interval — work, rest and
+    // the opening lead-in alike.
+    setWarn(secs <= WARN_AT && secs >= 1);
+
+    if (secs !== state.lastShown) {
+      if (secs >= 1 && secs <= WARN_AT && !state.paused) sfx.tick();
+      state.lastShown = secs;
+      countEl.textContent = secs;
+    }
+
+    var pct = state.phaseLen ? (1 - left / state.phaseLen) * 100 : 0;
+    progress.style.width = Math.min(100, Math.max(0, pct)) + '%';
+
+    roundNum.textContent = state.round;
+
+    // During rest the useful information is what's coming, so the big line
+    // becomes the next exercise with a "NEXT UP" caption above it.
+    var showing = (state.phase === 'rest' && state.round < ROUNDS)
+      ? ex(state.round + 1)
+      : ex(state.round);
+
+    phaseLabel.textContent =
+      state.phase === 'rest' ? 'REST' : (state.phase === 'countdown' ? 'GET READY' : 'WORK');
+    eyebrow.textContent = state.phase === 'rest' ? 'Next up' : '';
+    exName.textContent = showing.name;
+    exMeta.textContent = weightText(showing);
+    exCue.textContent = showing.cue;
+    pausedFlag.textContent = state.paused ? 'PAUSED' : '';
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function show(name) {
+    for (var k in screens) screens[k].classList.toggle('active', k === name);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Setup screen — editable weights
+   * ------------------------------------------------------------------ */
+
+  function buildPlan() {
+    var html = '';
+    for (var i = 0; i < EXERCISES.length; i++) {
+      html += '<li>' +
+                '<span class="n">' + (i + 1) + '</span>' +
+                '<span class="nm">' + esc(EXERCISES[i].name) + '</span>' +
+                '<input type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="300" step="5" ' +
+                  'data-i="' + i + '" aria-label="' + esc(EXERCISES[i].name) + ' weight in pounds" ' +
+                  'value="' + EXERCISES[i].lb + '">' +
+                '<span class="u">lb</span>' +
+              '</li>';
+    }
+    planList.innerHTML = html;
+  }
+
+  planList.addEventListener('input', function (e) {
+    var el = e.target;
+    if (!el.dataset || el.dataset.i === undefined) return;
+    var v = parseInt(el.value, 10);
+    EXERCISES[el.dataset.i].lb = isFinite(v) ? Math.min(300, Math.max(0, v)) : 0;
+    persist();
+  });
+
+  // Blank/garbage inputs snap back to a real number when you leave the field.
+  planList.addEventListener('blur', function (e) {
+    var el = e.target;
+    if (!el.dataset || el.dataset.i === undefined) return;
+    el.value = EXERCISES[el.dataset.i].lb;
+  }, true);
+
+  $('defaultsBtn').addEventListener('click', function () {
+    for (var i = 0; i < EXERCISES.length; i++) EXERCISES[i].lb = DEFAULT_LB[i];
+    buildPlan();
+    persist();
+  });
+
+  function readSettings() {
+    var w = parseInt(workInput.value, 10);
+    var r = parseInt(restInput.value, 10);
+    state.workSec = isFinite(w) ? Math.min(600, Math.max(5, w)) : 40;
+    state.restSec = isFinite(r) ? Math.min(600, Math.max(0, r)) : 20;
+    workInput.value = state.workSec;
+    restInput.value = state.restSec;
+  }
+
+  function updateTotal() {
+    var w = parseInt(workInput.value, 10); if (!isFinite(w)) w = 40;
+    var r = parseInt(restInput.value, 10); if (!isFinite(r)) r = 20;
+    var total = LEAD_IN + ROUNDS * Math.max(5, w) + (ROUNDS - 1) * Math.max(0, r);
+    var m = Math.floor(total / 60), s = total % 60;
+    totalTime.textContent = 'Total ≈ ' + m + ' min' + (s ? ' ' + s + ' sec' : '') +
+      ' · 0 lb = bodyweight';
+  }
+
+  workInput.addEventListener('input', updateTotal);
+  restInput.addEventListener('input', updateTotal);
+
+  /* ------------------------------------------------------------------ *
+   * Persistence (localStorage only — nothing leaves the device)
+   * ------------------------------------------------------------------ */
+
+  function persist() {
+    try {
+      localStorage.setItem('kbtimer', JSON.stringify({
+        work: parseInt(workInput.value, 10) || 40,
+        rest: parseInt(restInput.value, 10),
+        muted: muted,
+        lb: EXERCISES.map(function (e) { return e.lb; })
+      }));
+    } catch (e) { /* ignore */ }
+  }
+
+  (function restore() {
+    try {
+      var saved = JSON.parse(localStorage.getItem('kbtimer') || 'null');
+      if (!saved) return;
+      if (saved.work) workInput.value = saved.work;
+      if (saved.rest !== undefined && saved.rest !== null) restInput.value = saved.rest;
+      if (Array.isArray(saved.lb) && saved.lb.length === ROUNDS) {
+        for (var i = 0; i < ROUNDS; i++) {
+          var v = parseInt(saved.lb[i], 10);
+          if (isFinite(v)) EXERCISES[i].lb = Math.min(300, Math.max(0, v));
+        }
+      }
+      if (saved.muted) muteBtn.click();
+    } catch (e) { /* ignore */ }
+  })();
+
+  buildPlan();
+  updateTotal();
+
+  /* ------------------------------------------------------------------ *
+   * Controls
+   * ------------------------------------------------------------------ */
+
+  $('startBtn').addEventListener('click', function () {
+    unlockAudio();          // must happen synchronously inside this tap
+    readSettings();
+    persist();
+
+    state.running = true;
+    state.paused = false;
+    state.round = 1;
+    state.startedAt = Date.now();
+
+    show('run');
+    enterPhase('countdown', Date.now(), true);
+    requestWakeLock();
+    if (!raf) raf = requestAnimationFrame(frame);
+  });
+
+  pauseBtn.addEventListener('click', function () {
+    if (!state.running) return;
+    if (state.paused) {
+      state.paused = false;
+      state.phaseEnd = Date.now() + state.remaining;
+      pauseBtn.textContent = 'Pause';
+      requestWakeLock();
+    } else {
+      state.paused = true;
+      state.remaining = Math.max(0, state.phaseEnd - Date.now());
+      state.lastShown = null;   // let the tick re-arm on resume
+      pauseBtn.textContent = 'Resume';
+      releaseWakeLock();
+    }
+    paint();
+  });
+
+  $('skipBtn').addEventListener('click', function () {
+    if (!state.running) return;
+
+    // Skip always lands on the next exercise's work interval.
+    if (state.phase === 'countdown') { enterPhase('work', Date.now(), false); return; }
+    if (state.round >= ROUNDS) return finish();
+
+    state.round++;
+    state.paused = false;
+    pauseBtn.textContent = 'Pause';
+    requestWakeLock();
+    enterPhase('work', Date.now(), false);
+  });
+
+  $('resetBtn').addEventListener('click', reset);
+  $('againBtn').addEventListener('click', reset);
+
+  function reset() {
+    state.running = false;
+    state.paused = false;
+    state.phase = 'idle';
+    state.round = 0;
+    setWarn(false);
+    pauseBtn.textContent = 'Pause';
+    document.body.setAttribute('data-phase', 'idle');
+    releaseWakeLock();
+    show('setup');
+    updateTotal();
+  }
+
+  // Keep a single rAF loop alive; it no-ops while idle.
+  raf = requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
