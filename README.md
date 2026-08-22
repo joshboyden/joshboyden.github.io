@@ -12,6 +12,9 @@ Pages.
 
 The root `index.html` is a launcher listing them.
 
+Published as a GitHub user site, so each app lives at
+`https://joshboyden.github.io/<folder>/`.
+
 ## Adding an app
 
 1. Create a folder with an `index.html` that stands on its own.
