@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<title>Silver Falls</title>
+<meta name="description" content="Nine-week training tracker for the Silver Falls trail half marathon.">
+<!-- Label under the iOS home-screen icon. Without this iOS falls back to <title>. -->
+<meta name="apple-mobile-web-app-title" content="Silver Falls">
+<meta name="application-name" content="Silver Falls">
+<link rel="manifest" href="manifest.webmanifest">
+
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+
+<!-- Link preview (iMessage, Slack, etc). og:image must be an absolute URL. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Silver Falls">
+<meta property="og:title" content="Silver Falls">
+<meta property="og:description" content="Nine-week training tracker for the Silver Falls trail half marathon.">
+<meta property="og:url" content="https://joshboyden.github.io/silverfalls/">
+<meta property="og:image" content="https://joshboyden.github.io/silverfalls/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Silver Falls — trail half marathon training">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Silver Falls">
+<meta name="twitter:description" content="Nine-week training tracker for the Silver Falls trail half marathon.">
+<meta name="twitter:image" content="https://joshboyden.github.io/silverfalls/og.png">
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #14181e;
+    --panel-2: #0e1217;
+    --line: #262c35;
+    --line-soft: #1c222a;
+    --text: #f2f5f8;
+    --muted: #98a3b2;
+    --dim: #626d7c;
+
+    --accent: #ff8a3d;
+    --done: #2ee06a;
+    --skip: #7b8798;
+    --water: #eaf2fb;
+
+    --easy: #3b9cff;
+    --quality: #f5a524;
+    --strength: #a78bfa;
+    --long: #2ee06a;
+    --optional: #4d6b8a;
+    --rest: #4a5462;
+    --race: #ff8a3d;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+    touch-action: manipulation;
+    overscroll-behavior-y: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
+  button:active { filter: brightness(1.3); }
+
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 14px calc(28px + env(safe-area-inset-bottom)); }
+
+  /* ---------- Sticky header ---------- */
+
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(11, 13, 16, .92);
+    -webkit-backdrop-filter: saturate(140%) blur(12px);
+    backdrop-filter: saturate(140%) blur(12px);
+    border-bottom: 1px solid var(--line-soft);
+    padding: max(10px, env(safe-area-inset-top)) 0 10px;
+  }
+  header .inner { max-width: 560px; margin: 0 auto; padding: 0 14px; }
+
+  .hrow { display: flex; align-items: center; gap: 12px; }
+  .hrow h1 { margin: 0; font-size: 21px; letter-spacing: -.02em; line-height: 1.1; }
+  .hrow .sub { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .hrow .cd { margin-left: auto; text-align: right; flex: none; }
+  .hrow .cd b { display: block; font-size: 30px; font-weight: 800; line-height: 1; letter-spacing: -.03em; color: var(--accent); }
+  .hrow .cd span { display: block; font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
+
+  .hbar { height: 5px; border-radius: 3px; background: #1b212a; overflow: hidden; margin-top: 10px; }
+  .hbar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 3px; transition: width .25s ease; }
+
+  .hstats { display: flex; gap: 10px; align-items: baseline; margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+  .hstats b { color: var(--text); font-weight: 700; }
+  .hstats .streak { margin-left: auto; }
+  .hstats .streak b { color: var(--done); }
+
+  /* ---------- Consistency grid ---------- */
+
+  .consistency { padding: 16px 0 4px; }
+  .lbl { font-size: 10px; letter-spacing: .13em; text-transform: uppercase; color: var(--dim); font-weight: 800; }
+
+  /* One column per week, one row per weekday. Cells are emitted in date
+     order and the column flow fills top-to-bottom, so a column is a week. */
+  .dots {
+    display: grid; grid-auto-flow: column;
+    grid-template-rows: repeat(7, 14px); grid-auto-columns: 14px;
+    gap: 4px; margin-top: 9px;
+  }
+  .dots i {
+    display: block; border-radius: 4px;
+    background: #151a20; border: 1px solid #212832;
+  }
+  .dots i.done { background: var(--done); border-color: var(--done); }
+  .dots i.skip { background: transparent; border: 2px solid var(--skip); }
+  .dots i.miss { background: #333c48; border-color: #333c48; }
+  .dots i.today { box-shadow: 0 0 0 2px var(--accent); }
+  .dots i.race  { background: var(--accent); border-color: var(--accent); }
+
+  .wklabels {
+    display: grid; grid-auto-flow: column; grid-auto-columns: 14px; gap: 4px;
+    margin-top: 6px; font-size: 9px; font-weight: 700; color: var(--dim); text-align: center;
+  }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-size: 11px; color: var(--dim); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend em { width: 9px; height: 9px; border-radius: 3px; display: inline-block; font-style: normal; }
+
+  /* ---------- Week cards ---------- */
+
+  .weeks { display: flex; flex-direction: column; gap: 9px; margin-top: 18px; }
+
+  .week { background: var(--panel); border: 1px solid var(--line); border-radius: 15px; overflow: hidden; }
+  .week.now { border-color: #5a3a1c; }
+
+  .whead {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    background: none; border: 0; color: var(--text); text-align: left;
+    padding: 12px 14px; min-height: 62px;
+  }
+  .whead .wt { min-width: 0; }
+  .whead .wn { font-size: 15px; font-weight: 750; letter-spacing: -.01em; }
+  .whead .ws { display: block; color: var(--dim); font-size: 12px; font-weight: 500; margin-top: 3px; }
+  .whead .wsum { display: block; color: var(--dim); font-size: 11px; font-weight: 600; margin-top: 3px; }
+  .week.past .wn { color: var(--muted); }
+  .whead .spacer { flex: 1; }
+  .whead .chev { color: var(--dim); font-size: 11px; width: 12px; text-align: center; flex: none; }
+
+  .mini { width: 46px; height: 5px; border-radius: 3px; background: #1b212a; overflow: hidden; flex: none; }
+  .mini i { display: block; height: 100%; width: 0; background: var(--done); }
+
+  .badge {
+    display: inline-block; margin-left: 7px; vertical-align: 1px;
+    font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+    padding: 3px 6px; border-radius: 999px; border: 1px solid currentColor;
+  }
+  .badge.now  { color: var(--accent); }
+  .badge.down { color: var(--muted); }
+  .badge.peak { color: var(--quality); }
+  .badge.race { color: var(--race); }
+
+  .days { display: none; list-style: none; margin: 0; padding: 0 0 6px; }
+  .week.open .days { display: block; }
+
+  /* ---------- Day rows ---------- */
+
+  .day { border-top: 1px solid var(--line-soft); }
+  .day .row { display: flex; align-items: center; gap: 9px; padding: 0 9px 0 13px; }
+  .day.today .row { background: #191410; }
+
+  .day .info {
+    flex: 1; display: flex; align-items: center; gap: 9px; min-width: 0;
+    background: none; border: 0; color: var(--text); text-align: left;
+    padding: 9px 0; min-height: 54px;
+  }
+  .day .dw { width: 30px; flex: none; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); }
+  .day .dw b { display: block; font-size: 10px; font-weight: 600; color: #4b5563; margin-top: 2px; letter-spacing: 0; }
+  .day.today .dw { color: var(--accent); }
+  .day .dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--rest); }
+  .day .tx { flex: 1; font-size: 14px; font-weight: 600; line-height: 1.3; min-width: 0; }
+  .day .tx u { display: block; text-decoration: none; font-size: 11px; font-weight: 600; color: var(--done); margin-top: 3px; }
+  .day.rest .tx { color: var(--muted); font-weight: 500; }
+  .day.race .tx { color: var(--accent); font-weight: 800; letter-spacing: .02em; }
+
+  .day .check {
+    flex: none; width: 44px; height: 44px; border-radius: 12px;
+    background: var(--panel-2); border: 1px solid var(--line);
+    color: transparent; font-size: 17px; line-height: 1; display: grid; place-items: center;
+  }
+  .day.done .check { background: var(--done); border-color: var(--done); color: #04120a; }
+  .day.skip .check { background: transparent; border-color: var(--skip); color: var(--skip); font-size: 15px; }
+  .day.done .tx { color: var(--dim); }
+  .day.skip .tx { color: var(--dim); }
+
+  /* The nudge after a missed or skipped day. Deliberately not red. */
+  .nudge {
+    display: inline-block; margin-top: 5px; font-size: 10px; font-weight: 800;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+    border: 1px solid currentColor; border-radius: 999px; padding: 3px 7px;
+  }
+
+  /* ---------- Expanded log panel ---------- */
+
+  .log { display: none; padding: 2px 13px 14px 52px; }
+  .day.open .log { display: block; }
+
+  .fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .f { background: var(--panel-2); border: 1px solid var(--line); border-radius: 11px; padding: 7px 10px; }
+  .f label { display: block; font-size: 9px; letter-spacing: .11em; text-transform: uppercase; color: var(--dim); font-weight: 800; }
+  .f input {
+    width: 100%; background: transparent; border: 0; color: var(--text);
+    font: 650 16px/1.2 inherit; font-variant-numeric: tabular-nums; padding: 0; min-height: 34px;
+  }
+  .f input:focus { outline: none; }
+  .f input::placeholder { font-size: 13px; font-weight: 500; color: #4d5764; }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+
+  .note { margin-top: 7px; }
+  .note input { font-size: 14px; font-weight: 500; }
+
+  .logacts { display: flex; gap: 8px; margin-top: 9px; }
+  .logacts button {
+    min-height: 44px; padding: 0 14px; border-radius: 11px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--muted);
+    font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  }
+  .logacts button.on { border-color: var(--skip); color: var(--text); }
+
+  /* ---------- Footer tools ---------- */
+
+  footer { margin-top: 22px; }
+  .tools { background: var(--panel); border: 1px solid var(--line); border-radius: 15px; overflow: hidden; }
+  .tools > button {
+    width: 100%; min-height: 50px; background: none; border: 0; color: var(--muted);
+    font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  }
+  .tools .body { display: none; padding: 4px 14px 14px; }
+  .tools.open .body { display: block; }
+  .toolrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .toolrow button, .toolrow label {
+    display: grid; place-items: center; min-height: 46px; border-radius: 12px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    font-size: 13px; font-weight: 650; cursor: pointer;
+  }
+  .danger { margin-top: 8px; width: 100%; min-height: 46px; border-radius: 12px;
+    background: transparent; border: 1px solid #3a2a2a; color: #c98b8b; font-size: 13px; font-weight: 650; }
+  .toolnote { color: var(--dim); font-size: 11px; line-height: 1.5; margin: 10px 0 0; }
+  #importFile { display: none; }
+
+  .colophon { text-align: center; color: var(--dim); font-size: 11px; line-height: 1.6; margin-top: 16px; }
+  .colophon a { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <div class="hrow">
+      <div>
+        <h1>Silver Falls</h1>
+        <div class="sub" id="raceSub"></div>
+      </div>
+      <div class="cd">
+        <b id="cdNum">—</b>
+        <span id="cdUnit">days out</span>
+      </div>
+    </div>
+    <div class="hbar"><i id="hbar"></i></div>
+    <p class="hstats">
+      <span id="statWeeks"></span>
+      <span id="statPct"></span>
+      <span class="streak" id="statStreak"></span>
+    </p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="consistency">
+    <div class="lbl">Consistency</div>
+    <div class="dots" id="dots"></div>
+    <div class="wklabels" id="wklabels"></div>
+    <div class="legend">
+      <span><em style="background:var(--done)"></em>Done</span>
+      <span><em style="border:2px solid var(--skip)"></em>Skipped</span>
+      <span><em style="background:#333c48"></em>Missed</span>
+      <span><em style="background:#151a20;border:1px solid #212832"></em>Ahead</span>
+    </div>
+  </section>
+
+  <div class="weeks" id="weeks"></div>
+
+  <footer>
+    <div class="tools" id="tools">
+      <button id="toolsBtn" type="button">Data &amp; backup</button>
+      <div class="body">
+        <div class="toolrow">
+          <button id="exportBtn" type="button">Export JSON</button>
+          <label for="importFile">Import JSON</label>
+          <input id="importFile" type="file" accept="application/json,.json">
+        </div>
+        <button id="resetBtn" class="danger" type="button">Reset all logged data</button>
+        <p class="toolnote">
+          Everything lives in this browser only &mdash; nothing is uploaded. Export before
+          clearing site data or switching phones; import merges by date, keeping whichever
+          copy was saved most recently.
+        </p>
+      </div>
+    </div>
+    <p class="colophon">
+      Wednesday strength pairs well with <a href="../swingtime/">Swingtime</a>.<br>
+      <span id="storageWarn"></span>
+    </p>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================================================================== *
+   * PLAN
+   *
+   * Edit freely. `days` is always Monday-to-Sunday, 7 entries.
+   *   t     the workout text shown on the row
+   *   mi    planned distance, where the plan actually specifies one
+   *   type  drives the colour dot and the row styling
+   * ================================================================== */
+
+  var RACE = {
+    name: 'Silver Falls Trail Half',
+    date: '2026-10-18',
+    distance: '13.1 mi',
+    vert: '1,500 ft'
+  };
+
+  var PLAN_START = '2026-08-17';   // Monday of week 1
+
+  var PLAN = [
+    { week: 1, days: [
+      { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
+      { t: 'Hill repeats — 6–8 × 90 sec hard uphill, jog down',                type: 'quality' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Easy run 30–40 min',                                               type: 'easy' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Long run 7 mi — easy, trail',                            mi: 7,    type: 'long' },
+      { t: 'Easy 30 min, or rest',                                             type: 'optional' }
+    ]},
+    { week: 2, days: [
+      { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
+      { t: 'Trail tempo — 20–25 min comfortably hard',                         type: 'quality' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Easy run 30–40 min',                                               type: 'easy' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Long run 8 mi — rolling hills',                          mi: 8,    type: 'long' },
+      { t: 'Easy 30 min, or rest',                                             type: 'optional' }
+    ]},
+    { week: 3, days: [
+      { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
+      { t: 'Hill repeats — 6–8 × 90 sec hard uphill, jog down',                type: 'quality' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Easy run 30–40 min',                                               type: 'easy' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Long run 9 mi — sustained descent',                      mi: 9,    type: 'long' },
+      { t: 'Easy 30 min, or rest',                                             type: 'optional' }
+    ]},
+    { week: 4, note: 'Down week', days: [
+      { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
+      { t: 'Trail tempo — 20–25 min comfortably hard',                         type: 'quality' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Easy run 30–40 min',                                               type: 'easy' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Long run 6 mi — down week',                              mi: 6,    type: 'long' },
+      { t: 'Easy 30 min, or rest',                                             type: 'optional' }
+    ]},
+    { week: 5, days: [
+      { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
+      { t: 'Hill repeats — 6–8 × 90 sec hard uphill, jog down',                type: 'quality' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Easy run 30–40 min',                                               type: 'easy' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Long run 10 mi — race-terrain simulation',               mi: 10,   type: 'long' },
+      { t: 'Easy 30 min, or rest',                                             type: 'optional' }
+    ]},
+    { week: 6, note: 'Hardest', days: [
+      { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
+      { t: 'Trail tempo — 20–25 min comfortably hard',                         type: 'quality' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Easy run 30–40 min',                                               type: 'easy' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Long run 11 mi — hardest week',                          mi: 11,   type: 'long' },
+      { t: 'Easy 30 min, or rest',                                             type: 'optional' }
+    ]},
+    { week: 7, note: 'Down week', days: [
+      { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
+      { t: 'Hill repeats — 6–8 × 90 sec hard uphill, jog down',                type: 'quality' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Easy run 30–40 min',                                               type: 'easy' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Long run 8 mi — down week',                              mi: 8,    type: 'long' },
+      { t: 'Easy 30 min, or rest',                                             type: 'optional' }
+    ]},
+    { week: 8, note: 'Peak', days: [
+      { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
+      { t: 'Trail tempo — 20–25 min comfortably hard',                         type: 'quality' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Easy run 30–40 min',                                               type: 'easy' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Long run 12 mi — last big one, race effort final 3 mi',  mi: 12,   type: 'long' },
+      { t: 'Easy 30 min, or rest',                                             type: 'optional' }
+    ]},
+    { week: 9, note: 'Race week', days: [
+      { t: 'Rest',                                                             type: 'rest' },
+      { t: 'Easy 20 min — shake the legs out',                                 type: 'easy' },
+      { t: 'Shakeout 4 mi, a few strides',                           mi: 4,    type: 'easy' },
+      { t: 'Rest',                                                             type: 'rest' },
+      { t: 'Rest — lay out race kit',                                          type: 'rest' },
+      { t: 'Rest — early night',                                               type: 'rest' },
+      { t: 'RACE DAY — Silver Falls Trail Half, 13.1 mi', mi: 13.1,            type: 'race' }
+    ]}
+  ];
+
+  var STORE_KEY = 'trailhalf.v1';
+  var DAY_MS = 86400000;
+
+  /* ================================================================== *
+   * Dates
+   *
+   * Everything runs on local-midnight Date objects. `new Date('2026-08-17')`
+   * is never used: the spec parses a bare yyyy-mm-dd as UTC, which renders
+   * as the previous day for anyone west of Greenwich. Parsing the parts by
+   * hand and feeding them to the Date(y, m, d) constructor keeps every
+   * comparison in the runner's own timezone.
+   * ================================================================== */
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function parseISO(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+    if (!m) return null;
+    var d = new Date(+m[1], +m[2] - 1, +m[3]);   // local midnight
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+
+  // Adding to the day field (rather than to a timestamp) lets the Date
+  // constructor roll months and DST transitions for us; a +24h arithmetic
+  // shortcut would drift by an hour twice a year.
+  function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+
+  function today() { var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+
+  // Both arguments are local midnights, so the division is exact except
+  // across a DST boundary — hence the rounding.
+  function daysBetween(a, b) { return Math.round((b - a) / DAY_MS); }
+
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var DOWFULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+  function fmtShort(d) { return MON[d.getMonth()] + ' ' + d.getDate(); }
+  function fmtFull(d)  { return DOWFULL[(d.getDay() + 6) % 7] + ' ' + d.getDate() + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear(); }
+
+  var START = parseISO(PLAN_START);
+  var RACE_DATE = parseISO(RACE.date);
+
+  // The one place plan position turns into a real date: week 1 Monday plus
+  // whole weeks plus the Mon–Sun offset. Storage keys are derived from this,
+  // never from the week/day indexes themselves, so re-editing PLAN later
+  // cannot re-point an old entry at a different workout.
+  function dateOf(weekIndex, dayIndex) {
+    return addDays(START, weekIndex * 7 + dayIndex);
+  }
+
+  /* ================================================================== *
+   * Storage — one key, degrading to memory if the browser refuses
+   * ================================================================== */
+
+  var memoryOnly = false;
+  var state = { entries: {}, updated: null };
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && parsed.entries && typeof parsed.entries === 'object') {
+          state = { entries: parsed.entries, updated: parsed.updated || null };
+        }
+      }
+      // Prove writes work too; private-mode Safari throws only on setItem.
+      localStorage.setItem(STORE_KEY + '.probe', '1');
+      localStorage.removeItem(STORE_KEY + '.probe');
+    } catch (e) {
+      memoryOnly = true;
+    }
+  }
+
+  function save() {
+    state.updated = new Date().toISOString();
+    if (memoryOnly) return;
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    } catch (e) {
+      memoryOnly = true;
+      showStorageWarning();
+    }
+  }
+
+  function showStorageWarning() {
+    var el = document.getElementById('storageWarn');
+    if (memoryOnly && el) el.textContent = 'Storage is unavailable, so this session will not be remembered.';
+  }
+
+  function entry(key) { return state.entries[key] || null; }
+
+  function mutate(key, fn) {
+    var e = state.entries[key] || {};
+    fn(e);
+    // Drop entries that carry nothing, so exports stay small and an
+    // unchecked day never masquerades as logged.
+    var empty = !e.done && !e.skipped && e.distance == null && e.minutes == null && e.vert == null && !e.notes;
+    if (empty) delete state.entries[key]; else state.entries[key] = e;
+    save();
+  }
+
+  /* ================================================================== *
+   * Parsing helpers
+   * ================================================================== */
+
+  // Accepts "47" (minutes), "52:30" (mm:ss) and "1:12:30" (h:mm:ss).
+  // Returns minutes as a float, or null when there is nothing usable.
+  function parseTime(s) {
+    s = String(s == null ? '' : s).trim();
+    if (!s) return null;
+    var parts = s.split(':');
+    if (parts.length > 3) return null;
+    var nums = [];
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i].trim();
+      if (!/^\d*\.?\d+$/.test(p)) return null;
+      nums.push(parseFloat(p));
+    }
+    if (nums.length === 1) return nums[0];
+    if (nums.length === 2) return nums[0] + nums[1] / 60;
+    return nums[0] * 60 + nums[1] + nums[2] / 60;
+  }
+
+  // Minutes back into the tidiest form that survives a round trip.
+  function fmtTime(min) {
+    if (min == null) return '';
+    var total = Math.round(min * 60);
+    var h = Math.floor(total / 3600);
+    var m = Math.floor((total % 3600) / 60);
+    var s = total % 60;
+    if (h) return h + ':' + pad(m) + ':' + pad(s);
+    if (s) return m + ':' + pad(s);
+    return String(m);
+  }
+
+  function num(v) {
+    var n = parseFloat(String(v == null ? '' : v).trim());
+    return isFinite(n) ? n : null;
+  }
+
+  function tidy(n) {
+    if (n == null) return '';
+    return (Math.round(n * 100) / 100).toString();
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  /* ================================================================== *
+   * Derived views over the plan
+   * ================================================================== */
+
+  var ALL_DAYS = (function () {
+    var out = [];
+    PLAN.forEach(function (w, wi) {
+      w.days.forEach(function (d, di) {
+        out.push({ week: w.week, wi: wi, di: di, date: dateOf(wi, di), key: iso(dateOf(wi, di)), day: d });
+      });
+    });
+    return out;
+  })();
+
+  function statusOf(cell, t) {
+    var e = entry(cell.key);
+    if (e && e.done) return 'done';
+    if (e && e.skipped) return 'skip';
+    if (cell.date < t) return 'miss';
+    return 'open';
+  }
+
+  // The streak is consecutive *done* days ending at today (or at yesterday,
+  // while today is still unlogged — a day you have not got to yet should not
+  // read as a break). Skipping breaks it: that is the whole point of being
+  // able to see the run of days stack up.
+  function streaks(t) {
+    var cur = 0, best = 0, run = 0;
+    ALL_DAYS.forEach(function (c) {
+      if (statusOf(c, t) === 'done') { run++; if (run > best) best = run; }
+      else run = 0;
+    });
+
+    var i = ALL_DAYS.length - 1;
+    while (i >= 0 && ALL_DAYS[i].date > t) i--;            // walk back to today
+    if (i >= 0 && statusOf(ALL_DAYS[i], t) !== 'done') i--; // today not logged yet — start at yesterday
+    while (i >= 0 && statusOf(ALL_DAYS[i], t) === 'done') { cur++; i--; }
+
+    return { current: cur, best: best };
+  }
+
+  // "Don't miss twice": true when yesterday was skipped or missed and today
+  // is still open, so today's row can carry a gentle prompt.
+  function needsNudge(cell, t) {
+    if (daysBetween(t, cell.date) !== 0) return false;
+    if (statusOf(cell, t) !== 'open') return false;
+    var idx = ALL_DAYS.indexOf(cell);
+    if (idx <= 0) return false;
+    var prev = statusOf(ALL_DAYS[idx - 1], t);
+    return prev === 'skip' || prev === 'miss';
+  }
+
+  function weekStats(wi, t) {
+    var cells = ALL_DAYS.filter(function (c) { return c.wi === wi; });
+    var done = 0, skipped = 0, planned = 0, logged = 0;
+    cells.forEach(function (c) {
+      var st = statusOf(c, t);
+      if (st === 'done') done++;
+      if (st === 'skip') skipped++;
+      if (c.day.mi) planned += c.day.mi;
+      var e = entry(c.key);
+      if (e && e.distance != null) logged += e.distance;
+    });
+    return { done: done, skipped: skipped, planned: planned, logged: logged, total: cells.length };
+  }
+
+  function currentWeekIndex(t) {
+    if (t < START) return 0;
+    var off = Math.floor(daysBetween(START, t) / 7);
+    return Math.max(0, Math.min(PLAN.length - 1, off));
+  }
+
+  /* ================================================================== *
+   * Rendering
+   * ================================================================== */
+
+  var weeksEl = document.getElementById('weeks');
+  var dotsEl  = document.getElementById('dots');
+
+  document.getElementById('wklabels').innerHTML =
+    PLAN.map(function (w) { return '<span>' + w.week + '</span>'; }).join('');
+
+  function renderHeader(t) {
+    document.getElementById('raceSub').textContent =
+      fmtFull(RACE_DATE) + ' · ' + RACE.distance + ' · ' + RACE.vert;
+
+    var left = daysBetween(t, RACE_DATE);
+    document.getElementById('cdNum').textContent = left > 0 ? left : (left === 0 ? 'Go' : '✓');
+    document.getElementById('cdUnit').textContent = left > 1 ? 'days out' : (left === 1 ? 'day out' : (left === 0 ? 'race day' : 'finished'));
+
+    var done = 0;
+    ALL_DAYS.forEach(function (c) { if (statusOf(c, t) === 'done') done++; });
+    var pct = Math.round(done / ALL_DAYS.length * 100);
+
+    document.getElementById('hbar').style.width = pct + '%';
+
+    var wks = Math.floor(Math.max(0, left) / 7), dys = Math.max(0, left) % 7;
+    document.getElementById('statWeeks').innerHTML = left > 0
+      ? '<b>' + wks + '</b> wk ' + (dys ? '<b>' + dys + '</b> d' : '')
+      : '<b>Race run</b>';
+    document.getElementById('statPct').innerHTML = '<b>' + done + '</b>/' + ALL_DAYS.length + ' days · <b>' + pct + '%</b>';
+
+    var s = streaks(t);
+    document.getElementById('statStreak').innerHTML =
+      '<b>' + s.current + '</b> in a row' + (s.best > s.current ? ' · best <b>' + s.best + '</b>' : '');
+  }
+
+  function renderDots(t) {
+    dotsEl.innerHTML = ALL_DAYS.map(function (c) {
+      var st = statusOf(c, t);
+      var cls = st === 'open' ? '' : st;
+      if (c.day.type === 'race' && st !== 'done') cls += ' race';
+      if (daysBetween(t, c.date) === 0) cls += ' today';
+      return '<i class="' + cls + '" title="' + esc(fmtShort(c.date)) + '"></i>';
+    }).join('');
+  }
+
+  function badgeFor(w, wi, cur) {
+    if (wi === cur) return '<span class="badge now">This week</span>';
+    if (!w.note) return '';
+    var cls = /peak/i.test(w.note) ? 'peak' : /race/i.test(w.note) ? 'race' : 'down';
+    return '<span class="badge ' + cls + '">' + esc(w.note) + '</span>';
+  }
+
+  function summaryLine(wi, t) {
+    var s = weekStats(wi, t);
+    var bits = [s.done + '/' + s.total + ' done'];
+    if (s.skipped) bits.push(s.skipped + ' skip');
+    if (s.planned) bits.push(tidy(s.planned) + ' mi planned');
+    if (s.logged) bits.push(tidy(s.logged) + ' logged');
+    return bits.join(' · ');
+  }
+
+  function renderWeeks(t, reset) {
+    var cur = currentWeekIndex(t);
+    var openSet = {};
+    Array.prototype.forEach.call(weeksEl.querySelectorAll('.week.open'), function (el) { openSet[el.dataset.wi] = true; });
+    var fresh = reset || !weeksEl.children.length;
+
+    weeksEl.innerHTML = PLAN.map(function (w, wi) {
+      var cells = ALL_DAYS.filter(function (c) { return c.wi === wi; });
+      var isNow = wi === cur && t >= START && t <= RACE_DATE;
+      var isPast = cells[6].date < t;
+      var open = fresh ? isNow : !!openSet[wi];
+      var s = weekStats(wi, t);
+      var pct = Math.round(s.done / s.total * 100);
+
+      var rows = cells.map(function (c) {
+        var st = statusOf(c, t);
+        var e = entry(c.key);
+        var isToday = daysBetween(t, c.date) === 0;
+
+        var logged = [];
+        if (e && e.distance != null) logged.push(tidy(e.distance) + ' mi');
+        if (e && e.minutes != null) logged.push(fmtTime(e.minutes));
+        if (e && e.vert != null) logged.push(tidy(e.vert) + ' ft');
+        if (e && e.notes) logged.push(e.notes);
+
+        return '<li class="day ' + c.day.type +
+                 (st === 'done' ? ' done' : '') + (st === 'skip' ? ' skip' : '') +
+                 (isToday ? ' today' : '') + '" data-key="' + c.key + '">' +
+          '<div class="row">' +
+            '<button class="info" type="button" data-act="open">' +
+              '<span class="dw">' + DOW[c.di] + '<b>' + c.date.getDate() + ' ' + MON[c.date.getMonth()] + '</b></span>' +
+              '<span class="dot" style="background:var(--' + c.day.type + ');"></span>' +
+              '<span class="tx">' + esc(c.day.t) +
+                (logged.length ? '<u>' + esc(logged.join(' · ')) + '</u>' : '') +
+                (needsNudge(c, t) ? '<span class="nudge">Don’t miss twice</span>' : '') +
+              '</span>' +
+            '</button>' +
+            '<button class="check" type="button" data-act="check" aria-label="Mark done">' +
+              (st === 'skip' ? '–' : '✓') +
+            '</button>' +
+          '</div>' +
+          '<div class="log">' +
+            '<div class="fields">' +
+              '<div class="f"><label>Miles</label>' +
+                '<input type="number" step="0.1" min="0" inputmode="decimal" data-f="distance" value="' + (e && e.distance != null ? tidy(e.distance) : '') + '"></div>' +
+              '<div class="f"><label>Time</label>' +
+                '<input type="text" inputmode="numeric" placeholder="47 or 52:30" data-f="minutes" value="' + (e && e.minutes != null ? fmtTime(e.minutes) : '') + '"></div>' +
+              '<div class="f"><label>Vert (ft)</label>' +
+                '<input type="number" step="10" min="0" inputmode="numeric" data-f="vert" value="' + (e && e.vert != null ? tidy(e.vert) : '') + '"></div>' +
+            '</div>' +
+            '<div class="f note"><label>Note</label>' +
+              '<input type="text" data-f="notes" maxlength="140" placeholder="How did it go?" value="' + (e && e.notes ? esc(e.notes) : '') + '"></div>' +
+            '<div class="logacts">' +
+              '<button type="button" data-act="skip" class="' + (st === 'skip' ? 'on' : '') + '">' +
+                (st === 'skip' ? 'Unskip' : 'Skip this day') + '</button>' +
+            '</div>' +
+          '</div>' +
+        '</li>';
+      }).join('');
+
+      return '<section class="week' + (isNow ? ' now' : '') + (isPast ? ' past' : '') + (open ? ' open' : '') + '" data-wi="' + wi + '">' +
+        '<button class="whead" type="button">' +
+          '<span class="wt">' +
+            '<span class="wn">Week ' + w.week + badgeFor(w, wi, cur) + '</span>' +
+            '<span class="ws">' + fmtShort(cells[0].date) + ' – ' + fmtShort(cells[6].date) + '</span>' +
+            '<span class="wsum">' + summaryLine(wi, t) + '</span>' +
+          '</span>' +
+          '<span class="spacer"></span>' +
+          '<span class="mini"><i style="width:' + pct + '%"></i></span>' +
+          '<span class="chev">' + (open ? '▾' : '▸') + '</span>' +
+        '</button>' +
+        '<ol class="days">' + rows + '</ol>' +
+      '</section>';
+    }).join('');
+  }
+
+  function render(reset) {
+    var t = today();
+    renderHeader(t);
+    renderDots(t);
+    renderWeeks(t, reset);
+  }
+
+  // Repaint the parts that summarise state without rebuilding the week list,
+  // so a tick never collapses the card the user is looking at.
+  function refreshSummaries() {
+    var t = today();
+    renderHeader(t);
+    renderDots(t);
+    Array.prototype.forEach.call(weeksEl.querySelectorAll('.week'), function (el) {
+      var wi = +el.dataset.wi;
+      var s = weekStats(wi, t);
+      var cells = ALL_DAYS.filter(function (c) { return c.wi === wi; });
+      el.querySelector('.wsum').textContent = summaryLine(wi, t);
+      el.querySelector('.mini i').style.width = Math.round(s.done / s.total * 100) + '%';
+    });
+  }
+
+  function refreshRow(li) {
+    var t = today();
+    var key = li.dataset.key;
+    var cell = null;
+    for (var i = 0; i < ALL_DAYS.length; i++) if (ALL_DAYS[i].key === key) { cell = ALL_DAYS[i]; break; }
+    if (!cell) return;
+
+    var st = statusOf(cell, t);
+    li.classList.toggle('done', st === 'done');
+    li.classList.toggle('skip', st === 'skip');
+    li.querySelector('.check').textContent = st === 'skip' ? '–' : '✓';
+
+    var e = entry(key);
+    var logged = [];
+    if (e && e.distance != null) logged.push(tidy(e.distance) + ' mi');
+    if (e && e.minutes != null) logged.push(fmtTime(e.minutes));
+    if (e && e.vert != null) logged.push(tidy(e.vert) + ' ft');
+    if (e && e.notes) logged.push(e.notes);
+
+    var tx = li.querySelector('.tx');
+    var u = tx.querySelector('u');
+    if (logged.length) {
+      if (!u) { u = document.createElement('u'); tx.appendChild(u); }
+      u.textContent = logged.join(' · ');
+    } else if (u) {
+      u.remove();
+    }
+
+    var nudge = li.querySelector('.nudge');
+    if (nudge && st !== 'open') nudge.remove();
+
+    var skipBtn = li.querySelector('[data-act="skip"]');
+    skipBtn.textContent = st === 'skip' ? 'Unskip' : 'Skip this day';
+    skipBtn.classList.toggle('on', st === 'skip');
+  }
+
+  /* ================================================================== *
+   * Interaction
+   * ================================================================== */
+
+  weeksEl.addEventListener('click', function (ev) {
+    var head = ev.target.closest('.whead');
+    if (head) {
+      var wk = head.parentNode;
+      wk.classList.toggle('open');
+      wk.querySelector('.chev').textContent = wk.classList.contains('open') ? '▾' : '▸';
+      return;
+    }
+
+    var btn = ev.target.closest('button[data-act]');
+    if (!btn) return;
+    var li = btn.closest('.day');
+    if (!li) return;
+    var key = li.dataset.key;
+
+    if (btn.dataset.act === 'open') { li.classList.toggle('open'); return; }
+
+    if (btn.dataset.act === 'check') {
+      var wasDone = !!(entry(key) && entry(key).done);
+      mutate(key, function (e) {
+        delete e.skipped;                       // done and skipped are exclusive
+        if (wasDone) delete e.done; else e.done = true;
+      });
+      refreshRow(li);
+      refreshSummaries();
+      return;
+    }
+
+    if (btn.dataset.act === 'skip') {
+      var wasSkipped = !!(entry(key) && entry(key).skipped);
+      mutate(key, function (e) { delete e.done; if (wasSkipped) delete e.skipped; else e.skipped = true; });
+      refreshRow(li);
+      refreshSummaries();
+    }
+  });
+
+  // Inputs save as they are typed (debounced) and again on blur, so a phone
+  // dying mid-note loses at most a second of typing.
+  var saveTimer = null;
+  function commitInput(input) {
+    var li = input.closest('.day');
+    var key = li.dataset.key;
+    var field = input.dataset.f;
+    var raw = input.value;
+
+    mutate(key, function (e) {
+      if (field === 'notes') {
+        var txt = raw.trim();
+        if (txt) e.notes = txt; else delete e.notes;
+      } else if (field === 'minutes') {
+        var min = parseTime(raw);
+        if (min != null) e.minutes = min; else delete e.minutes;
+      } else {
+        var n = num(raw);
+        if (n != null && n >= 0) e[field] = n; else delete e[field];
+      }
+    });
+    refreshRow(li);
+    refreshSummaries();
+  }
+
+  weeksEl.addEventListener('input', function (ev) {
+    var input = ev.target.closest('input[data-f]');
+    if (!input) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { commitInput(input); }, 400);
+  });
+
+  weeksEl.addEventListener('blur', function (ev) {
+    var input = ev.target.closest && ev.target.closest('input[data-f]');
+    if (!input) return;
+    clearTimeout(saveTimer);
+    commitInput(input);
+    // Normalise what was typed: "1:12:30" stays, "72.5" becomes 1:12:30.
+    if (input.dataset.f === 'minutes') {
+      var e = entry(input.closest('.day').dataset.key);
+      input.value = e && e.minutes != null ? fmtTime(e.minutes) : '';
+    }
+  }, true);
+
+  /* ================================================================== *
+   * Export / import / reset
+   * ================================================================== */
+
+  var tools = document.getElementById('tools');
+  document.getElementById('toolsBtn').addEventListener('click', function () { tools.classList.toggle('open'); });
+
+  document.getElementById('exportBtn').addEventListener('click', function () {
+    var payload = JSON.stringify({ entries: state.entries, updated: state.updated || new Date().toISOString() }, null, 2);
+    var blob = new Blob([payload], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'trailhalf-' + iso(today()) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  });
+
+  document.getElementById('importFile').addEventListener('change', function (ev) {
+    var file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var incoming;
+      try { incoming = JSON.parse(reader.result); } catch (e) { incoming = null; }
+      if (!incoming || typeof incoming !== 'object' || !incoming.entries || typeof incoming.entries !== 'object') {
+        window.alert('That does not look like a Silver Falls export.');
+        ev.target.value = '';
+        return;
+      }
+
+      // Merge by date. Per-file timestamps are all we have, so the newer
+      // file wins on any date both copies know about.
+      var mineNewer = state.updated && incoming.updated && state.updated > incoming.updated;
+      var added = 0, replaced = 0;
+
+      Object.keys(incoming.entries).forEach(function (key) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return;
+        if (!state.entries[key]) { state.entries[key] = incoming.entries[key]; added++; }
+        else if (!mineNewer) { state.entries[key] = incoming.entries[key]; replaced++; }
+      });
+
+      save();
+      render(true);
+      ev.target.value = '';
+      window.alert('Imported ' + added + ' new ' + (added === 1 ? 'day' : 'days') +
+                   (replaced ? ' and updated ' + replaced : '') + '.');
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function () {
+    if (!window.confirm('Erase every tick, skip and note? The plan itself stays.')) return;
+    state.entries = {};
+    save();
+    render(true);
+  });
+
+  /* ================================================================== *
+   * Boot
+   * ================================================================== */
+
+  load();
+  showStorageWarning();
+  render(true);
+
+  // Bring the current week into view under the sticky header.
+  (function scrollToNow() {
+    var now = weeksEl.querySelector('.week.now');
+    if (!now) return;
+    var head = document.querySelector('header');
+    var top = now.getBoundingClientRect().top + window.pageYOffset - head.offsetHeight - 10;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+  })();
+
+  // A phone left open overnight should wake up on the right day.
+  var shownDay = iso(today());
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) return;
+    var now = iso(today());
+    if (now !== shownDay) { shownDay = now; render(true); }
+    else refreshSummaries();
+  });
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () { /* offline support is a bonus, not a requirement */ });
+    });
+  }
+})();
+</script>
+</body>
+</html>
