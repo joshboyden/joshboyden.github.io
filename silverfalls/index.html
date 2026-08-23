@@ -239,6 +239,77 @@
   }
   .logacts button.on { border-color: var(--skip); color: var(--text); }
 
+  /* ---------- Strength drill-down ---------- */
+
+  .lift-btn { border-color: #3d3450 !important; color: var(--strength) !important; }
+
+  .sheet { position: fixed; inset: 0; z-index: 60; display: none; }
+  .sheet.open { display: block; }
+  .sheet .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.72); }
+
+  .sheet .panel {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    max-height: 92dvh; display: flex; flex-direction: column;
+    background: var(--bg); border-top: 1px solid var(--line);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -18px 48px rgba(0,0,0,.5);
+  }
+
+  .sheet .shead {
+    display: flex; align-items: center; gap: 10px; flex: none;
+    padding: 14px 14px 12px; border-bottom: 1px solid var(--line-soft);
+  }
+  .sheet .shead h2 { margin: 0; font-size: 18px; letter-spacing: -.015em; }
+  .sheet .shead .dose { display: block; color: var(--muted); font-size: 12px; font-weight: 600; margin-top: 3px; }
+  .sheet .shead button {
+    margin-left: auto; flex: none; min-height: 44px; padding: 0 16px; border-radius: 12px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--text);
+    font-size: 13px; font-weight: 700;
+  }
+  /* The grab handle is decorative; the Done button is the real affordance. */
+  .sheet .grip { position: absolute; top: 7px; left: 50%; transform: translateX(-50%);
+    width: 36px; height: 4px; border-radius: 2px; background: #2b323c; }
+
+  .sheet .sbody {
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 12px 14px calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .lift { background: var(--panel); border: 1px solid var(--line); border-radius: 15px; margin-bottom: 9px; overflow: hidden; }
+  .lift > button {
+    width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
+    background: none; border: 0; color: var(--text); padding: 12px 14px; min-height: 60px;
+  }
+  .lift .n { font-size: 15px; font-weight: 750; letter-spacing: -.01em; }
+  .lift .n em { display: block; font-style: normal; font-size: 12px; font-weight: 500; color: var(--dim); margin-top: 3px; }
+  .lift .d { margin-left: auto; flex: none; font-size: 14px; font-weight: 750; color: var(--strength); white-space: nowrap; }
+  .lift .cv { flex: none; color: var(--dim); font-size: 11px; width: 12px; text-align: center; }
+
+  .lift .how { display: none; padding: 0 14px 14px; }
+  .lift.open .how { display: block; }
+
+  .how h4 {
+    margin: 12px 0 6px; font-size: 10px; letter-spacing: .13em; text-transform: uppercase;
+    color: var(--dim); font-weight: 800;
+  }
+  .how h4:first-child { margin-top: 4px; }
+  .how ul { margin: 0; padding-left: 17px; }
+  .how li { font-size: 13.5px; line-height: 1.55; color: var(--muted); margin-bottom: 5px; }
+  .how li::marker { color: #3f4855; }
+  .how p { font-size: 13.5px; line-height: 1.55; color: var(--muted); margin: 0; }
+  .how .why { color: var(--text); font-weight: 500; border-left: 2px solid var(--strength); padding-left: 11px; }
+  .how .warn li { color: #d3b58e; }
+  .how .scale { color: var(--dim); font-size: 12.5px; line-height: 1.5; }
+
+  .lift.gloss { background: var(--panel-2); }
+  .lift.gloss .n { font-weight: 700; }
+  .how dl { margin: 0; }
+  .how dt { font-size: 13px; font-weight: 750; color: var(--text); margin-top: 11px; }
+  .how dt:first-child { margin-top: 2px; }
+  .how dd { margin: 3px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+
+  .sheet-note { color: var(--dim); font-size: 12px; line-height: 1.55; margin: 4px 2px 12px; }
+
   /* ---------- Footer tools ---------- */
 
   footer { margin-top: 22px; }
@@ -303,6 +374,22 @@
 
   <div class="weeks" id="weeks"></div>
 
+  <!-- ============ STRENGTH DRILL-DOWN ============ -->
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="scrim" data-act="close"></div>
+    <div class="panel">
+      <span class="grip"></span>
+      <div class="shead">
+        <div>
+          <h2 id="sheetTitle">Strength session</h2>
+          <span class="dose" id="sheetDose"></span>
+        </div>
+        <button type="button" data-act="close">Done</button>
+      </div>
+      <div class="sbody" id="sheetBody"></div>
+    </div>
+  </div>
+
   <footer>
     <div class="tools" id="tools">
       <button id="toolsBtn" type="button">Data &amp; backup</button>
@@ -321,6 +408,7 @@
       </div>
     </div>
     <p class="colophon">
+      <a href="#" id="liftsLink">How to do the strength exercises</a><br>
       Wednesday strength pairs well with <a href="../swingtime/">Swingtime</a>.<br>
       <span id="storageWarn"></span>
     </p>
@@ -354,72 +442,72 @@
     { week: 1, days: [
       { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
       { t: 'Hill repeats — 6–8 × 90 sec hard uphill, jog down',                type: 'quality' },
-      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength', lift: 'full' },
       { t: 'Easy run 30–40 min',                                               type: 'easy' },
-      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional', lift: 'half' },
       { t: 'Long run 7 mi — easy, trail',                            mi: 7,    type: 'long' },
       { t: 'Easy 30 min, or rest',                                             type: 'optional' }
     ]},
     { week: 2, days: [
       { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
       { t: 'Trail tempo — 20–25 min comfortably hard',                         type: 'quality' },
-      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength', lift: 'full' },
       { t: 'Easy run 30–40 min',                                               type: 'easy' },
-      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional', lift: 'half' },
       { t: 'Long run 8 mi — rolling hills',                          mi: 8,    type: 'long' },
       { t: 'Easy 30 min, or rest',                                             type: 'optional' }
     ]},
     { week: 3, days: [
       { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
       { t: 'Hill repeats — 6–8 × 90 sec hard uphill, jog down',                type: 'quality' },
-      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength', lift: 'full' },
       { t: 'Easy run 30–40 min',                                               type: 'easy' },
-      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional', lift: 'half' },
       { t: 'Long run 9 mi — sustained descent',                      mi: 9,    type: 'long' },
       { t: 'Easy 30 min, or rest',                                             type: 'optional' }
     ]},
     { week: 4, note: 'Down week', days: [
       { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
       { t: 'Trail tempo — 20–25 min comfortably hard',                         type: 'quality' },
-      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength', lift: 'full' },
       { t: 'Easy run 30–40 min',                                               type: 'easy' },
-      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional', lift: 'half' },
       { t: 'Long run 6 mi — down week',                              mi: 6,    type: 'long' },
       { t: 'Easy 30 min, or rest',                                             type: 'optional' }
     ]},
     { week: 5, days: [
       { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
       { t: 'Hill repeats — 6–8 × 90 sec hard uphill, jog down',                type: 'quality' },
-      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength', lift: 'full' },
       { t: 'Easy run 30–40 min',                                               type: 'easy' },
-      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional', lift: 'half' },
       { t: 'Long run 10 mi — race-terrain simulation',               mi: 10,   type: 'long' },
       { t: 'Easy 30 min, or rest',                                             type: 'optional' }
     ]},
     { week: 6, note: 'Hardest', days: [
       { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
       { t: 'Trail tempo — 20–25 min comfortably hard',                         type: 'quality' },
-      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength', lift: 'full' },
       { t: 'Easy run 30–40 min',                                               type: 'easy' },
-      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional', lift: 'half' },
       { t: 'Long run 11 mi — hardest week',                          mi: 11,   type: 'long' },
       { t: 'Easy 30 min, or rest',                                             type: 'optional' }
     ]},
     { week: 7, note: 'Down week', days: [
       { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
       { t: 'Hill repeats — 6–8 × 90 sec hard uphill, jog down',                type: 'quality' },
-      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength', lift: 'full' },
       { t: 'Easy run 30–40 min',                                               type: 'easy' },
-      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional', lift: 'half' },
       { t: 'Long run 8 mi — down week',                              mi: 8,    type: 'long' },
       { t: 'Easy 30 min, or rest',                                             type: 'optional' }
     ]},
     { week: 8, note: 'Peak', days: [
       { t: 'Rest, or 20 min easy walk',                                        type: 'rest' },
       { t: 'Trail tempo — 20–25 min comfortably hard',                         type: 'quality' },
-      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength' },
+      { t: 'Strength — Nordic/RDL 3×6, SL-RDL 3×8, hip thrust 3×12, core',     type: 'strength', lift: 'full' },
       { t: 'Easy run 30–40 min',                                               type: 'easy' },
-      { t: 'Rest, or strength #2 at half volume',                              type: 'optional' },
+      { t: 'Rest, or strength #2 at half volume',                              type: 'optional', lift: 'half' },
       { t: 'Long run 12 mi — last big one, race effort final 3 mi',  mi: 12,   type: 'long' },
       { t: 'Easy 30 min, or rest',                                             type: 'optional' }
     ]},
@@ -432,6 +520,128 @@
       { t: 'Rest — early night',                                               type: 'rest' },
       { t: 'RACE DAY — Silver Falls Trail Half, 13.1 mi', mi: 13.1,            type: 'race' }
     ]}
+  ];
+
+  /* ================================================================== *
+   * Strength session
+   *
+   * The five movements the plan calls for, with enough coaching to do them
+   * from the page. `dose` is the Wednesday prescription, `half` the Friday
+   * option (same reps, half the sets).
+   * ================================================================== */
+
+  var GLOSSARY = [
+    ['Eccentric', 'The lowering half of a rep — the part where the muscle is getting longer under load. You are far stronger lowering than lifting, and doing it slowly on purpose is what builds a hamstring that shrugs off a steep descent.'],
+    ['Hinge', 'Bending at the hips with a flat back, pushing your backside away from you. Not a squat, and definitely not a rounded-over bend at the waist.'],
+    ['Neutral spine', 'The back keeps its natural shape — not arched, not rounded. If someone laid a broom along your spine it would touch your head, mid-back and tailbone the whole time.']
+  ];
+
+  var LIFTS = [
+    {
+      id: 'ham',
+      name: 'Nordic curl',
+      alt: 'or slow-eccentric RDL',
+      dose: '3 × 6',
+      half: '2 × 6',
+      why: 'Downhill running is one long braking effort, and the hamstring does the braking. This is the single most protective thing in the session.',
+      setup: [
+        'Kneel on something soft, ankles anchored under a couch, a loaded barbell or a partner’s hands.',
+        'Body straight from knees to shoulders, hips locked out — no sitting back on your heels.',
+        'Hands up by your chest, ready to catch the floor.'
+      ],
+      move: [
+        'Lower yourself forward as slowly as you can, fighting the whole way down. Four or five seconds is a good rep.',
+        'Catch yourself with your hands when you can no longer hold the descent.',
+        'Push off the floor just enough to get back to the top, and go again.'
+      ],
+      dont: [
+        'Don’t let the hips break — the moment your backside sticks out, the hamstrings stop working.',
+        'Don’t chase depth. Six controlled inches beats a foot of freefall.'
+      ],
+      scale: 'These make people memorably sore. Do one set the first week, two the second. If you have no way to anchor your ankles, do the RDL version instead.',
+      altHow: 'Slow-eccentric RDL: dumbbells or a barbell at your hips, knees soft. Hinge — push the hips back and let the weight track down your legs, taking four seconds to reach mid-shin. Stand back up at normal speed. The slow lowering is the whole point.'
+    },
+    {
+      id: 'slrdl',
+      name: 'Single-leg RDL',
+      dose: '3 × 8 per side',
+      half: '2 × 8 per side',
+      why: 'Running is jumping from one leg to the other. This trains the hinge and the balance together, which is exactly what a rooty, off-camber trail asks for.',
+      setup: [
+        'Stand on one leg, that knee soft rather than locked.',
+        'Hold a weight in the opposite hand to start — same side is harder to balance.'
+      ],
+      move: [
+        'Hinge forward, driving the free leg straight back like a see-saw, until your torso is roughly parallel to the ground.',
+        'Keep your hips level the whole way. Imagine headlights on your hip bones staying pointed at the floor.',
+        'Come back up by squeezing the glute of the standing leg, not by yanking with your back.'
+      ],
+      dont: [
+        'Don’t let the free hip rotate open to the ceiling — that is the most common fault and it turns the exercise into something else.',
+        'Don’t round your back to reach lower. Stop where the flat back stops.'
+      ],
+      scale: 'Wobbling is normal and is part of the training. Fingertips on a wall are fine while you learn it; drop the weight before you drop the form.'
+    },
+    {
+      id: 'thrust',
+      name: 'Hip thrust',
+      alt: 'or glute bridge on the floor',
+      dose: '3 × 12',
+      half: '2 × 12',
+      why: 'Glutes are the engine on climbs. They also stop the knee collapsing inward when you are tired at mile 10.',
+      setup: [
+        'Upper back against a bench or the edge of a sofa, roughly at shoulder-blade height.',
+        'Feet flat, hip-width, close enough that your shins go vertical at the top.',
+        'Chin tucked, eyes on your knees.'
+      ],
+      move: [
+        'Drive through your heels and push your hips up until your body is a straight line from shoulders to knees.',
+        'Squeeze the glutes hard and hold for a second at the top.',
+        'Lower under control — don’t just drop.'
+      ],
+      dont: [
+        'Don’t finish the movement with your lower back. If you feel it there, you have gone past straight into arched: ribs down, squeeze harder.'
+      ],
+      scale: 'No bench? Do it flat on the floor as a glute bridge — smaller range, same job. Add weight across the hips once twelve feels easy.'
+    },
+    {
+      id: 'core',
+      name: 'Dead bug + bird dog',
+      dose: '2 × 10 each',
+      half: '1 × 10 each',
+      why: 'Neither is about a burning midsection. Both teach your trunk to stay still while your arms and legs move, which is all a core does when you run.',
+      setup: [
+        'Dead bug: on your back, arms straight up, knees stacked over hips at ninety degrees.',
+        'Bird dog: hands under shoulders, knees under hips.'
+      ],
+      move: [
+        'Dead bug — press your lower back into the floor and keep it pinned. Slowly reach the opposite arm and leg away until they hover just off the ground, then return. Breathe out on the way out.',
+        'Bird dog — extend the opposite arm and leg to full length, hips square, back flat. Hold two seconds, then return without touching down.'
+      ],
+      dont: [
+        'Don’t let your lower back peel off the floor on the dead bug. When it does, that is the end of the set.',
+        'Don’t let a hip rise on the bird dog. A glass of water on your lower back should not spill.'
+      ],
+      scale: 'Too hard? Move only the legs, arms stay put. Ten slow honest reps beat thirty sloppy ones.'
+    },
+    {
+      id: 'plank',
+      name: 'Side plank',
+      dose: '2 × 30 sec per side',
+      half: '1 × 30 sec per side',
+      why: 'Holds up the hip that is taking all your weight mid-stride. Weak here shows up as a hip that drops with every step, and then as IT band pain.',
+      setup: [
+        'On your forearm, elbow directly under the shoulder.',
+        'Feet stacked or staggered, body in one straight line.'
+      ],
+      move: [
+        'Lift the hips off the floor, squeeze the glutes, and breathe normally for the full thirty seconds.'
+      ],
+      dont: [
+        'Don’t let the hips sag toward the floor or roll forward — stay stacked, shoulder over shoulder, hip over hip.'
+      ],
+      scale: 'Bend the knees and take the weight on them instead of your feet. Build to a full-length hold from there.'
+    }
   ];
 
   var STORE_KEY = 'trailhalf.v1';
@@ -777,6 +987,7 @@
             '<div class="logacts">' +
               '<button type="button" data-act="skip" class="' + (st === 'skip' ? 'on' : '') + '">' +
                 (st === 'skip' ? 'Unskip' : 'Skip this day') + '</button>' +
+              (c.day.lift ? '<button type="button" class="lift-btn" data-act="lifts" data-lift="' + c.day.lift + '">Exercises</button>' : '') +
             '</div>' +
           '</div>' +
         '</li>';
@@ -877,6 +1088,8 @@
 
     if (btn.dataset.act === 'open') { li.classList.toggle('open'); return; }
 
+    if (btn.dataset.act === 'lifts') { openSheet(btn.dataset.lift); return; }
+
     if (btn.dataset.act === 'check') {
       var wasDone = !!(entry(key) && entry(key).done);
       mutate(key, function (e) {
@@ -939,6 +1152,103 @@
       input.value = e && e.minutes != null ? fmtTime(e.minutes) : '';
     }
   }, true);
+
+  /* ================================================================== *
+   * Strength drill-down
+   * ================================================================== */
+
+  var sheet = document.getElementById('sheet');
+  var sheetBody = document.getElementById('sheetBody');
+  var scrollLock = 0;
+
+  function list(cls, items) {
+    return '<ul class="' + cls + '">' + items.map(function (i) { return '<li>' + i + '</li>'; }).join('') + '</ul>';
+  }
+
+  function renderSheet(mode) {
+    var half = mode === 'half';
+
+    document.getElementById('sheetDose').textContent = half
+      ? 'Second session — same reps, half the sets'
+      : 'Wednesday — the non-negotiable one';
+
+    var intro = '<p class="sheet-note">Warm up with five minutes of easy movement first. Rest 60&ndash;90 seconds between sets. ' +
+                'Everything here is scalable &mdash; the notes at the end of each movement say how.</p>';
+
+    // Collapsed by default: the movements are what you came for, but the
+    // words used to describe them have to be one tap away.
+    var gloss =
+      '<section class="lift gloss">' +
+        '<button type="button" data-act="lift-toggle">' +
+          '<span class="n">Jargon, decoded<em>eccentric, hinge, neutral spine</em></span>' +
+          '<span class="cv">&#9656;</span>' +
+        '</button>' +
+        '<div class="how"><dl>' +
+          GLOSSARY.map(function (g) { return '<dt>' + g[0] + '</dt><dd>' + g[1] + '</dd>'; }).join('') +
+        '</dl></div>' +
+      '</section>';
+
+    var cards = LIFTS.map(function (l) {
+      var how =
+        '<div class="how">' +
+          '<p class="why">' + l.why + '</p>' +
+          '<h4>Set up</h4>' + list('', l.setup) +
+          '<h4>The movement</h4>' + list('', l.move) +
+          '<h4>Common faults</h4>' + list('warn', l.dont) +
+          (l.altHow ? '<h4>' + l.alt.replace(/^or /, '').replace(/^./, function (c) { return c.toUpperCase(); }) + '</h4><p>' + l.altHow + '</p>' : '') +
+          '<h4>Scaling it</h4><p class="scale">' + l.scale + '</p>' +
+        '</div>';
+
+      return '<section class="lift" data-lift-id="' + l.id + '">' +
+        '<button type="button" data-act="lift-toggle">' +
+          '<span class="n">' + l.name + (l.alt ? '<em>' + l.alt + '</em>' : '') + '</span>' +
+          '<span class="d">' + (half ? l.half : l.dose) + '</span>' +
+          '<span class="cv">&#9656;</span>' +
+        '</button>' + how +
+      '</section>';
+    }).join('');
+
+    sheetBody.innerHTML = intro + gloss + cards;
+    sheetBody.scrollTop = 0;
+  }
+
+  function openSheet(mode) {
+    renderSheet(mode);
+    sheet.classList.add('open');
+    // Freeze the page behind the sheet so scrolling stays inside it.
+    scrollLock = window.pageYOffset;
+    document.body.style.position = 'fixed';
+    document.body.style.top = -scrollLock + 'px';
+    document.body.style.width = '100%';
+  }
+
+  function closeSheet() {
+    sheet.classList.remove('open');
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+    window.scrollTo(0, scrollLock);
+  }
+
+  sheet.addEventListener('click', function (ev) {
+    if (ev.target.closest('[data-act="close"]')) { closeSheet(); return; }
+
+    var head = ev.target.closest('[data-act="lift-toggle"]');
+    if (head) {
+      var card = head.parentNode;
+      card.classList.toggle('open');
+      card.querySelector('.cv').innerHTML = card.classList.contains('open') ? '&#9662;' : '&#9656;';
+    }
+  });
+
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && sheet.classList.contains('open')) closeSheet();
+  });
+
+  document.getElementById('liftsLink').addEventListener('click', function (ev) {
+    ev.preventDefault();
+    openSheet('full');
+  });
 
   /* ================================================================== *
    * Export / import / reset

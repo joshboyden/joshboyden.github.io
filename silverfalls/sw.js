@@ -4,7 +4,7 @@
  * serving the old copy: the install step fetches this list fresh, and the
  * activate step deletes every cache that is not the current one.
  */
-var CACHE = 'silverfalls-v1';
+var CACHE = 'silverfalls-v2';
 
 var ASSETS = [
   './',
