@@ -239,6 +239,27 @@
   }
   .logacts button.on { border-color: var(--skip); color: var(--text); }
 
+  /* ---------- Check animation ---------- */
+
+  /* Sits above the plan but below the strength sheet. Hidden while idle so
+     it costs nothing between taps. */
+  #fx {
+    position: fixed; inset: 0; z-index: 50;
+    pointer-events: none; display: none;
+  }
+
+  @keyframes plunge {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(.82); }
+    70%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+  .day .check.splash { animation: plunge .42s cubic-bezier(.3, 1.4, .5, 1); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .day .check.splash { animation: none; }
+  }
+
   /* ---------- Strength drill-down ---------- */
 
   .lift-btn { border-color: #3d3450 !important; color: var(--strength) !important; }
@@ -373,6 +394,8 @@
   </section>
 
   <div class="weeks" id="weeks"></div>
+
+  <canvas id="fx" aria-hidden="true"></canvas>
 
   <!-- ============ STRENGTH DRILL-DOWN ============ -->
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
@@ -1098,6 +1121,7 @@
       });
       refreshRow(li);
       refreshSummaries();
+      if (!wasDone) celebrate(btn);
       return;
     }
 
@@ -1152,6 +1176,146 @@
       input.value = e && e.minutes != null ? fmtTime(e.minutes) : '';
     }
   }, true);
+
+  /* ================================================================== *
+   * Check animation
+   *
+   * A short fall of water out of the box you just ticked. Everything is
+   * drawn on one canvas that stays display:none between taps, and the
+   * animation loop only runs while particles are alive — an idle app costs
+   * nothing. Honours prefers-reduced-motion by simply not playing.
+   * ================================================================== */
+
+  var fx = document.getElementById('fx');
+  var fxCtx = fx.getContext('2d');
+  var drops = [];
+  var rings = [];
+  var fxRaf = null;
+  var fxLast = 0;
+
+  var GRAVITY = 1500;          // px/s², tuned to read as water rather than dust
+  var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function sizeFx() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    fx.width  = Math.floor(window.innerWidth * dpr);
+    fx.height = Math.floor(window.innerHeight * dpr);
+    fx.style.width = window.innerWidth + 'px';
+    fx.style.height = window.innerHeight + 'px';
+    fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  window.addEventListener('resize', function () { if (drops.length || rings.length) sizeFx(); });
+
+  function splash(x, y) {
+    if (calm) return;
+
+    sizeFx();
+
+    // The lip of the fall: a wide, mostly-upward spray.
+    for (var i = 0; i < 22; i++) {
+      var ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.3;   // up, spread ±66°
+      var spd = 120 + Math.random() * 220;
+      drops.push({
+        x: x, y: y,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd,
+        r: 1.4 + Math.random() * 2.4,
+        life: 0.5 + Math.random() * 0.45,
+        age: 0,
+        pale: Math.random() < 0.35
+      });
+    }
+
+    // A few heavy ones that just fall, so it reads as a fall and not a firework.
+    for (var j = 0; j < 6; j++) {
+      drops.push({
+        x: x + (Math.random() - 0.5) * 18,
+        y: y + 4,
+        vx: (Math.random() - 0.5) * 40,
+        vy: 40 + Math.random() * 90,
+        r: 1.8 + Math.random() * 2.2,
+        life: 0.55 + Math.random() * 0.35,
+        age: 0,
+        pale: false
+      });
+    }
+
+    rings.push({ x: x, y: y, age: 0, life: 0.5 });
+
+    fx.style.display = 'block';
+    if (!fxRaf) { fxLast = performance.now(); fxRaf = requestAnimationFrame(fxFrame); }
+  }
+
+  function fxFrame(now) {
+    var dt = Math.min((now - fxLast) / 1000, 0.05);   // clamp, so a backgrounded tab does not teleport
+    fxLast = now;
+
+    fxCtx.clearRect(0, 0, fx.width, fx.height);
+
+    for (var i = drops.length - 1; i >= 0; i--) {
+      var d = drops[i];
+      d.age += dt;
+      if (d.age >= d.life) { drops.splice(i, 1); continue; }
+
+      d.vy += GRAVITY * dt;
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+
+      var t = 1 - d.age / d.life;
+      // Stretch each drop along its travel, which is what sells it as water.
+      var stretch = Math.min(Math.abs(d.vy) / 420, 2.2);
+
+      fxCtx.globalAlpha = Math.min(1, t * 1.6);
+      fxCtx.fillStyle = d.pale ? '#8fb4d9' : '#eaf2fb';
+      fxCtx.beginPath();
+      fxCtx.ellipse(d.x, d.y, d.r, d.r * (1 + stretch), 0, 0, Math.PI * 2);
+      fxCtx.fill();
+    }
+
+    for (var k = rings.length - 1; k >= 0; k--) {
+      var g = rings[k];
+      g.age += dt;
+      if (g.age >= g.life) { rings.splice(k, 1); continue; }
+
+      var p = g.age / g.life;
+      fxCtx.globalAlpha = (1 - p) * 0.55;
+      fxCtx.strokeStyle = '#eaf2fb';
+      fxCtx.lineWidth = 2 - p;
+      fxCtx.beginPath();
+      fxCtx.arc(g.x, g.y, 10 + p * 38, 0, Math.PI * 2);
+      fxCtx.stroke();
+    }
+
+    fxCtx.globalAlpha = 1;
+
+    if (drops.length || rings.length) {
+      fxRaf = requestAnimationFrame(fxFrame);
+    } else {
+      fxRaf = null;
+      fx.style.display = 'none';       // idle: nothing to composite
+    }
+  }
+
+  // Never leave particles mid-flight when the app goes to the background.
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden || !fxRaf) return;
+    cancelAnimationFrame(fxRaf);
+    fxRaf = null;
+    drops.length = 0;
+    rings.length = 0;
+    fxCtx.clearRect(0, 0, fx.width, fx.height);
+    fx.style.display = 'none';
+  });
+
+  function celebrate(btn) {
+    var r = btn.getBoundingClientRect();
+    splash(r.left + r.width / 2, r.top + r.height / 2);
+    // Restarting the class is what lets the bounce replay on a re-check.
+    btn.classList.remove('splash');
+    void btn.offsetWidth;
+    btn.classList.add('splash');
+  }
 
   /* ================================================================== *
    * Strength drill-down
