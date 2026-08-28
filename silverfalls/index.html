@@ -165,6 +165,11 @@
     font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
     padding: 3px 6px; border-radius: 999px; border: 1px solid currentColor;
   }
+  .wreset {
+    display: block; width: 100%; text-align: left; background: none; border: 0;
+    color: var(--dim); font-size: 11px; font-weight: 700; letter-spacing: .02em;
+    padding: 4px 14px 10px; margin-top: -4px; min-height: 44px;
+  }
   .badge.now  { color: var(--accent); }
   .badge.down { color: var(--muted); }
   .badge.peak { color: var(--quality); }
@@ -173,25 +178,44 @@
   .days { display: none; list-style: none; margin: 0; padding: 0 0 6px; }
   .week.open .days { display: block; }
 
-  /* ---------- Day rows ---------- */
+  /* ---------- Weekday groups ---------- */
 
-  .day { border-top: 1px solid var(--line-soft); }
-  .day .row { display: flex; align-items: center; gap: 9px; padding: 0 9px 0 13px; }
-  .day.today .row { background: #191410; }
+  /* A group is one weekday's real calendar date. It normally holds one
+     session card; a move can leave it empty or stack several. */
+  .dgroup { border-top: 1px solid var(--line-soft); }
+
+  .ghead { display: flex; align-items: baseline; gap: 7px; padding: 9px 13px 2px; }
+  .ghead .gd {
+    font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--dim);
+  }
+  .ghead .gd b { font-weight: 600; letter-spacing: 0; text-transform: none; margin-left: 5px; color: #4b5563; }
+  .dgroup.today .ghead .gd, .dgroup.today .ghead .gd b { color: var(--accent); }
+  .dgroup.today { background: #191410; }
+
+  .empty { padding: 3px 13px 12px; color: var(--dim); font-size: 12.5px; font-style: italic; }
+
+  /* ---------- Session cards ---------- */
+
+  .day + .day { border-top: 1px solid var(--line-soft); }
+  .day .row { display: flex; align-items: center; gap: 9px; padding: 0 9px 4px 13px; }
 
   .day .info {
     flex: 1; display: flex; align-items: center; gap: 9px; min-width: 0;
     background: none; border: 0; color: var(--text); text-align: left;
-    padding: 9px 0; min-height: 54px;
+    padding: 5px 0; min-height: 48px;
   }
-  .day .dw { width: 30px; flex: none; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); }
-  .day .dw b { display: block; font-size: 10px; font-weight: 600; color: #4b5563; margin-top: 2px; letter-spacing: 0; }
-  .day.today .dw { color: var(--accent); }
   .day .dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--rest); }
   .day .tx { flex: 1; font-size: 14px; font-weight: 600; line-height: 1.3; min-width: 0; }
   .day .tx u { display: block; text-decoration: none; font-size: 11px; font-weight: 600; color: var(--done); margin-top: 3px; }
   .day.rest .tx { color: var(--muted); font-weight: 500; }
   .day.race .tx { color: var(--accent); font-weight: 800; letter-spacing: .02em; }
+
+  .moved {
+    display: inline-block; margin-left: 6px; vertical-align: 1px;
+    font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--dim); border: 1px solid #333c48; border-radius: 999px; padding: 2px 6px;
+  }
 
   .day .check {
     flex: none; width: 44px; height: 44px; border-radius: 12px;
@@ -212,8 +236,20 @@
 
   /* ---------- Expanded log panel ---------- */
 
-  .log { display: none; padding: 2px 13px 14px 52px; }
+  .log { display: none; padding: 2px 13px 14px 26px; }
   .day.open .log { display: block; }
+
+  /* ---------- Day picker ---------- */
+
+  .daypick { margin-bottom: 10px; }
+  .daypick .lbl { display: block; margin-bottom: 6px; }
+  .daypick .row2 { display: flex; flex-wrap: wrap; gap: 6px; }
+  .daypick button {
+    min-height: 44px; padding: 0 11px; border-radius: 10px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--muted);
+    font-size: 12.5px; font-weight: 700;
+  }
+  .daypick button[aria-pressed="true"] { background: var(--easy); border-color: var(--easy); color: #04121f; }
 
   .fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
   .f { background: var(--panel-2); border: 1px solid var(--line); border-radius: 11px; padding: 7px 10px; }
@@ -721,11 +757,67 @@
   }
 
   /* ================================================================== *
+   * Within-week reshuffling
+   *
+   * A "move" reassigns which weekday a planned session DISPLAYS on, for one
+   * week only. It never touches the session's storage key — that stays the
+   * date the plan originally put it on, so ticks, notes and the consistency
+   * grid all keep tracking "was this planned session done," independent of
+   * which day you actually got to it. Moves are keyed by that week's Monday
+   * date rather than by week index, matching how everything else here is
+   * keyed off real dates instead of positions that could drift if the plan
+   * is edited later.
+   * ================================================================== */
+
+  function weekMondayKey(wi) { return iso(dateOf(wi, 0)); }
+
+  function weekMoves(wi) { return state.moves[weekMondayKey(wi)] || {}; }
+
+  // Seven buckets, one per displayed weekday, each holding the original
+  // day-indices (0-6) of the sessions shown there. Default is the identity
+  // placement; a bucket can end up empty, or holding more than one session.
+  function weekPlacement(wi) {
+    var moves = weekMoves(wi);
+    var placement = [[], [], [], [], [], [], []];
+    for (var di = 0; di < 7; di++) {
+      var to = moves[di];
+      var target = (typeof to === 'number' && to >= 0 && to <= 6) ? to : di;
+      placement[target].push(di);
+    }
+    return placement;
+  }
+
+  function weekHasMoves(wi) {
+    var m = state.moves[weekMondayKey(wi)];
+    return !!(m && Object.keys(m).length);
+  }
+
+  // toDi === origDi is how a single session snaps back to its own day.
+  function setMove(wi, origDi, toDi) {
+    var key = weekMondayKey(wi);
+    if (toDi === origDi) {
+      if (state.moves[key]) {
+        delete state.moves[key][origDi];
+        if (!Object.keys(state.moves[key]).length) delete state.moves[key];
+      }
+    } else {
+      if (!state.moves[key]) state.moves[key] = {};
+      state.moves[key][origDi] = toDi;
+    }
+    save();
+  }
+
+  function resetWeekMoves(wi) {
+    delete state.moves[weekMondayKey(wi)];
+    save();
+  }
+
+  /* ================================================================== *
    * Storage — one key, degrading to memory if the browser refuses
    * ================================================================== */
 
   var memoryOnly = false;
-  var state = { entries: {}, updated: null };
+  var state = { entries: {}, moves: {}, updated: null };
 
   function load() {
     try {
@@ -733,7 +825,11 @@
       if (raw) {
         var parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object' && parsed.entries && typeof parsed.entries === 'object') {
-          state = { entries: parsed.entries, updated: parsed.updated || null };
+          state = {
+            entries: parsed.entries,
+            moves: (parsed.moves && typeof parsed.moves === 'object') ? parsed.moves : {},
+            updated: parsed.updated || null
+          };
         }
       }
       // Prove writes work too; private-mode Safari throws only on setItem.
@@ -968,51 +1064,71 @@
       var open = fresh ? isNow : !!openSet[wi];
       var s = weekStats(wi, t);
       var pct = Math.round(s.done / s.total * 100);
+      var placement = weekPlacement(wi);
 
-      var rows = cells.map(function (c) {
-        var st = statusOf(c, t);
-        var e = entry(c.key);
-        var isToday = daysBetween(t, c.date) === 0;
+      var groups = placement.map(function (origIndices, pos) {
+        var gdate = cells[pos].date;
+        var isToday = daysBetween(t, gdate) === 0;
 
-        var logged = [];
-        if (e && e.distance != null) logged.push(tidy(e.distance) + ' mi');
-        if (e && e.minutes != null) logged.push(fmtTime(e.minutes));
-        if (e && e.vert != null) logged.push(tidy(e.vert) + ' ft');
-        if (e && e.notes) logged.push(e.notes);
+        var cards = origIndices.map(function (di) {
+          var c = cells[di];
+          var moved = di !== pos;
+          var st = statusOf(c, t);
+          var e = entry(c.key);
 
-        return '<li class="day ' + c.day.type +
-                 (st === 'done' ? ' done' : '') + (st === 'skip' ? ' skip' : '') +
-                 (isToday ? ' today' : '') + '" data-key="' + c.key + '">' +
-          '<div class="row">' +
-            '<button class="info" type="button" data-act="open">' +
-              '<span class="dw">' + DOW[c.di] + '<b>' + c.date.getDate() + ' ' + MON[c.date.getMonth()] + '</b></span>' +
-              '<span class="dot" style="background:var(--' + c.day.type + ');"></span>' +
-              '<span class="tx">' + esc(c.day.t) +
-                (logged.length ? '<u>' + esc(logged.join(' · ')) + '</u>' : '') +
-                (needsNudge(c, t) ? '<span class="nudge">Don’t miss twice</span>' : '') +
-              '</span>' +
-            '</button>' +
-            '<button class="check" type="button" data-act="check" aria-label="Mark done">' +
-              (st === 'skip' ? '–' : '✓') +
-            '</button>' +
-          '</div>' +
-          '<div class="log">' +
-            '<div class="fields">' +
-              '<div class="f"><label>Miles</label>' +
-                '<input type="number" step="0.1" min="0" inputmode="decimal" data-f="distance" value="' + (e && e.distance != null ? tidy(e.distance) : '') + '"></div>' +
-              '<div class="f"><label>Time</label>' +
-                '<input type="text" inputmode="numeric" placeholder="47 or 52:30" data-f="minutes" value="' + (e && e.minutes != null ? fmtTime(e.minutes) : '') + '"></div>' +
-              '<div class="f"><label>Vert (ft)</label>' +
-                '<input type="number" step="10" min="0" inputmode="numeric" data-f="vert" value="' + (e && e.vert != null ? tidy(e.vert) : '') + '"></div>' +
+          var logged = [];
+          if (e && e.distance != null) logged.push(tidy(e.distance) + ' mi');
+          if (e && e.minutes != null) logged.push(fmtTime(e.minutes));
+          if (e && e.vert != null) logged.push(tidy(e.vert) + ' ft');
+          if (e && e.notes) logged.push(e.notes);
+
+          var picker = DOW.map(function (label, i) {
+            return '<button type="button" data-act="movepick" data-to="' + i + '" aria-pressed="' + (i === pos) + '">' + label + '</button>';
+          }).join('');
+
+          return '<div class="day ' + c.day.type +
+                   (st === 'done' ? ' done' : '') + (st === 'skip' ? ' skip' : '') +
+                   '" data-key="' + c.key + '" data-wi="' + wi + '" data-di="' + di + '">' +
+            '<div class="row">' +
+              '<button class="info" type="button" data-act="open">' +
+                '<span class="dot" style="background:var(--' + c.day.type + ');"></span>' +
+                '<span class="tx">' + esc(c.day.t) +
+                  (moved ? '<span class="moved">from ' + DOW[di] + '</span>' : '') +
+                  (logged.length ? '<u>' + esc(logged.join(' · ')) + '</u>' : '') +
+                  (needsNudge(c, t) && !moved ? '<span class="nudge">Don’t miss twice</span>' : '') +
+                '</span>' +
+              '</button>' +
+              '<button class="check" type="button" data-act="check" aria-label="Mark done">' +
+                (st === 'skip' ? '–' : '✓') +
+              '</button>' +
             '</div>' +
-            '<div class="f note"><label>Note</label>' +
-              '<input type="text" data-f="notes" maxlength="140" placeholder="How did it go?" value="' + (e && e.notes ? esc(e.notes) : '') + '"></div>' +
-            '<div class="logacts">' +
-              '<button type="button" data-act="skip" class="' + (st === 'skip' ? 'on' : '') + '">' +
-                (st === 'skip' ? 'Unskip' : 'Skip this day') + '</button>' +
-              (c.day.lift ? '<button type="button" class="lift-btn" data-act="lifts" data-lift="' + c.day.lift + '">Exercises</button>' : '') +
+            '<div class="log">' +
+              '<div class="daypick">' +
+                '<label class="lbl">Day this week</label>' +
+                '<div class="row2">' + picker + '</div>' +
+              '</div>' +
+              '<div class="fields">' +
+                '<div class="f"><label>Miles</label>' +
+                  '<input type="number" step="0.1" min="0" inputmode="decimal" data-f="distance" value="' + (e && e.distance != null ? tidy(e.distance) : '') + '"></div>' +
+                '<div class="f"><label>Time</label>' +
+                  '<input type="text" inputmode="numeric" placeholder="47 or 52:30" data-f="minutes" value="' + (e && e.minutes != null ? fmtTime(e.minutes) : '') + '"></div>' +
+                '<div class="f"><label>Vert (ft)</label>' +
+                  '<input type="number" step="10" min="0" inputmode="numeric" data-f="vert" value="' + (e && e.vert != null ? tidy(e.vert) : '') + '"></div>' +
+              '</div>' +
+              '<div class="f note"><label>Note</label>' +
+                '<input type="text" data-f="notes" maxlength="140" placeholder="How did it go?" value="' + (e && e.notes ? esc(e.notes) : '') + '"></div>' +
+              '<div class="logacts">' +
+                '<button type="button" data-act="skip" class="' + (st === 'skip' ? 'on' : '') + '">' +
+                  (st === 'skip' ? 'Unskip' : 'Skip this day') + '</button>' +
+                (c.day.lift ? '<button type="button" class="lift-btn" data-act="lifts" data-lift="' + c.day.lift + '">Exercises</button>' : '') +
+              '</div>' +
             '</div>' +
-          '</div>' +
+          '</div>';
+        }).join('');
+
+        return '<li class="dgroup' + (isToday ? ' today' : '') + '" data-pos="' + pos + '">' +
+          '<div class="ghead"><span class="gd">' + DOW[pos] + '<b>' + gdate.getDate() + ' ' + MON[gdate.getMonth()] + '</b></span></div>' +
+          (cards || '<div class="empty">Nothing scheduled</div>') +
         '</li>';
       }).join('');
 
@@ -1027,7 +1143,8 @@
           '<span class="mini"><i style="width:' + pct + '%"></i></span>' +
           '<span class="chev">' + (open ? '▾' : '▸') + '</span>' +
         '</button>' +
-        '<ol class="days">' + rows + '</ol>' +
+        (weekHasMoves(wi) ? '<button type="button" class="wreset" data-act="reset-week">Undo this week&rsquo;s reordering</button>' : '') +
+        '<ol class="days">' + groups + '</ol>' +
       '</section>';
     }).join('');
   }
@@ -1094,6 +1211,20 @@
    * Interaction
    * ================================================================== */
 
+  // A move or a week reset changes which sessions group under which day, so
+  // it needs a full re-render rather than the in-place patch a tick gets.
+  // The card being worked on is re-opened and scrolled to afterward so the
+  // move itself doesn't feel like a jump cut.
+  function reRenderWeek(focusKey) {
+    render(false);
+    if (!focusKey) return;
+    var card = weeksEl.querySelector('.day[data-key="' + focusKey + '"]');
+    if (card) {
+      card.classList.add('open');
+      card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+
   weeksEl.addEventListener('click', function (ev) {
     var head = ev.target.closest('.whead');
     if (head) {
@@ -1105,6 +1236,13 @@
 
     var btn = ev.target.closest('button[data-act]');
     if (!btn) return;
+
+    if (btn.dataset.act === 'reset-week') {
+      resetWeekMoves(+btn.closest('.week').dataset.wi);
+      reRenderWeek(null);
+      return;
+    }
+
     var li = btn.closest('.day');
     if (!li) return;
     var key = li.dataset.key;
@@ -1112,6 +1250,12 @@
     if (btn.dataset.act === 'open') { li.classList.toggle('open'); return; }
 
     if (btn.dataset.act === 'lifts') { openSheet(btn.dataset.lift); return; }
+
+    if (btn.dataset.act === 'movepick') {
+      setMove(+li.dataset.wi, +li.dataset.di, +btn.dataset.to);
+      reRenderWeek(key);
+      return;
+    }
 
     if (btn.dataset.act === 'check') {
       var wasDone = !!(entry(key) && entry(key).done);
@@ -1422,7 +1566,7 @@
   document.getElementById('toolsBtn').addEventListener('click', function () { tools.classList.toggle('open'); });
 
   document.getElementById('exportBtn').addEventListener('click', function () {
-    var payload = JSON.stringify({ entries: state.entries, updated: state.updated || new Date().toISOString() }, null, 2);
+    var payload = JSON.stringify({ entries: state.entries, moves: state.moves, updated: state.updated || new Date().toISOString() }, null, 2);
     var blob = new Blob([payload], { type: 'application/json' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
@@ -1458,6 +1602,15 @@
         else if (!mineNewer) { state.entries[key] = incoming.entries[key]; replaced++; }
       });
 
+      // Same policy for which days got reordered, keyed by the Monday of
+      // the week they belong to rather than by date.
+      if (incoming.moves && typeof incoming.moves === 'object') {
+        Object.keys(incoming.moves).forEach(function (wk) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(wk)) return;
+          if (!state.moves[wk] || !mineNewer) state.moves[wk] = incoming.moves[wk];
+        });
+      }
+
       save();
       render(true);
       ev.target.value = '';
@@ -1468,8 +1621,9 @@
   });
 
   document.getElementById('resetBtn').addEventListener('click', function () {
-    if (!window.confirm('Erase every tick, skip and note? The plan itself stays.')) return;
+    if (!window.confirm('Erase every tick, skip, note and reordered day? The plan itself stays.')) return;
     state.entries = {};
+    state.moves = {};
     save();
     render(true);
   });
